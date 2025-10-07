@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Development files
+src/
+*.ts
+tsconfig.json
+nodemon.json
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# VS Code
+.vscode/
+
+# Git
+.git/
+.gitignore
+
+# README and docs
+README.md
+docs/
+
+# Test files
+test/
+tests/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
