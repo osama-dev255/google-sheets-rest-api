@@ -1,8 +1,8 @@
-// API configuration
+// API configuration for Netlify deployment
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 
-                    (typeof window !== 'undefined' && window.location.hostname.includes('railway.app') 
-                      ? 'http://google-sheets-rest-api.railway.internal:3000'
-                      : 'https://google-sheets-rest-api-production.up.railway.app');
+                    (import.meta.env.MODE === 'production' 
+                      ? 'https://google-sheets-rest-api-production.up.railway.app'
+                      : 'http://localhost:3000');
 
 export const API_ENDPOINTS = {
   HEALTH: `${API_BASE_URL}/health`,

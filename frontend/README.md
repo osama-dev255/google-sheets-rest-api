@@ -45,9 +45,9 @@ The frontend uses the following environment variables:
 VITE_BACKEND_URL=http://localhost:3000
 ```
 
-For Railway deployment, you can set this in the Railway dashboard:
-- `VITE_BACKEND_URL=http://google-sheets-rest-api.railway.internal:3000` (for internal services)
-- `VITE_BACKEND_URL=https://your-backend-url.railway.app` (for external services)
+For production deployments:
+- Netlify: Set in Netlify Dashboard → Site settings → Environment variables
+- `VITE_BACKEND_URL=https://google-sheets-rest-api-production.up.railway.app`
 
 ## Building for Production
 
@@ -60,7 +60,7 @@ For Railway deployment, you can set this in the Railway dashboard:
 
 ## Running in Production
 
-Railway will automatically detect and build this Vite application. For local testing:
+For local testing:
 
 ```bash
 # Build and preview the production build
@@ -83,29 +83,49 @@ src/
 
 ## Deployment
 
-### Railway Deployment (Recommended)
+### Netlify Deployment (Recommended - Easiest)
 
-Railway automatically detects Vite applications and handles the build process:
+Netlify is the simplest option for deploying this static React application:
+
+1. Push your code to GitHub
+2. Visit [netlify.com](https://netlify.com) and sign in
+3. Click "Add new site" → "Import an existing project"
+4. Select your GitHub repository
+5. Set these build settings:
+   - Base directory: `frontend`
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+6. Add environment variable in Netlify Dashboard:
+   - `VITE_BACKEND_URL=https://google-sheets-rest-api-production.up.railway.app`
+7. Click "Deploy site"
+
+### Manual Netlify Deployment
+
+```bash
+# Install Netlify CLI
+npm install -g netlify-cli
+
+# Build your project
+npm run build
+
+# Deploy to Netlify
+netlify deploy --prod
+```
+
+### Railway Deployment (Alternative)
+
+If you prefer Railway:
 
 1. Push your code to GitHub
 2. Create a new project in Railway
 3. Connect your GitHub repository
 4. Set the root directory to `/frontend` in Railway settings
 5. Set environment variables in Railway dashboard:
-   - `VITE_BACKEND_URL=http://google-sheets-rest-api.railway.internal:3000` (if using internal services)
+   - `VITE_BACKEND_URL=https://google-sheets-rest-api-production.up.railway.app`
 6. Railway will automatically:
    - Detect the Vite project
    - Run `npm run build` to build the application
-   - Serve the static files automatically (no custom server needed)
-
-### Environment Variables in Railway
-
-In Railway Dashboard → Your Project → Variables:
-```
-VITE_BACKEND_URL=http://google-sheets-rest-api.railway.internal:3000
-```
-
-If your frontend and backend are in the same Railway project and the backend service is named `google-sheets-rest-api`, use the internal URL for better performance.
+   - Serve the static files automatically
 
 ## Available Scripts
 
@@ -116,5 +136,5 @@ If your frontend and backend are in the same Railway project and the backend ser
 
 ## Note About server.js
 
-The `server.js` file is provided for local testing but is not needed when deploying to Railway,
-which handles static file serving automatically for Vite applications.
+The `server.js` file is provided for local testing but is not needed when deploying to Netlify or Railway,
+which handle static file serving automatically for Vite applications.
