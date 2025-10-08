@@ -12,16 +12,9 @@
     "resolveJsonModule": true,
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "sourceMap": true,
+    "sourceMap": false,
     "declaration": false,
-    "removeComments": true,
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true
+    "removeComments": true
   },
   "include": [
     "src/**/*"
@@ -29,6 +22,8 @@
   "exclude": [
     "node_modules",
     "dist",
-    "logs"
+    "logs",
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }

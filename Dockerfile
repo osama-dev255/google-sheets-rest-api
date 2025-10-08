@@ -7,14 +7,17 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --omit=dev
+# Install all dependencies (including dev dependencies for build)
+RUN npm install
 
-# Copy source code
+# Copy source code and configuration files
 COPY . .
 
 # Build TypeScript
 RUN npm run build
+
+# Remove dev dependencies after build
+RUN npm prune --omit=dev
 
 # Expose the port
 EXPOSE 3000
