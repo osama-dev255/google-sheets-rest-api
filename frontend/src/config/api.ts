@@ -1,5 +1,18 @@
 // API configuration
-const API_BASE_URL = 'https://google-sheets-rest-api-production.up.railway.app';
+// Using a function to determine the base URL based on environment
+const getApiBaseUrl = () => {
+  // For Railway internal services
+  if (typeof window !== 'undefined' && window.location.hostname.includes('railway.app')) {
+    // Check if we're in the same Railway project
+    // This would be the internal service URL
+    return 'http://google-sheets-rest-api.railway.internal:3000';
+  }
+  
+  // Default to production URL
+  return 'https://google-sheets-rest-api-production.up.railway.app';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export const API_ENDPOINTS = {
   HEALTH: `${API_BASE_URL}/health`,
