@@ -41,12 +41,13 @@ A React dashboard for interacting with the Google Sheets REST API.
 
 ## Running in Production
 
-1. After building, start the production server:
-   ```bash
-   npm start
-   ```
+Railway will automatically detect and build this Vite application. For local testing:
 
-2. The server will start on port 3000 (or the PORT environment variable)
+```bash
+# Build and preview the production build
+npm run build
+npm run preview
+```
 
 ## Project Structure
 
@@ -63,37 +64,35 @@ src/
 
 ## Deployment
 
-### Railway Deployment
+### Railway Deployment (Recommended)
 
-1. Push your code to a GitHub repository
+Railway automatically detects Vite applications and handles the build process:
+
+1. Push your code to GitHub
 2. Create a new project in Railway
 3. Connect your GitHub repository
-4. Railway will automatically detect the Vite project and deploy it
-5. Set the start command to `npm start` in Railway settings
+4. Set the root directory to `/frontend` in Railway settings
+5. Railway will automatically:
+   - Detect the Vite project
+   - Run `npm run build` to build the application
+   - Serve the static files automatically (no custom server needed)
 
-### Docker Deployment
+### Environment Variables
 
-You can also deploy using Docker:
+The frontend connects to your deployed backend API at:
+`https://google-sheets-rest-api-production.up.railway.app`
 
-```bash
-# Build the Docker image
-docker build -t google-sheets-dashboard .
-
-# Run the container
-docker run -p 3000:3000 google-sheets-dashboard
-```
+If you're using internal services in the same Railway project, the frontend will automatically detect this and use:
+`http://google-sheets-rest-api.railway.internal:3000`
 
 ## Available Scripts
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
-- `npm start` - Start production server
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
 
-## Environment Variables
+## Note About server.js
 
-The frontend connects to your deployed backend API at:
-`https://google-sheets-rest-api-production.up.railway.app`
-
-If you need to change this, update the API configuration in `src/config/api.ts`.
+The `server.js` file is provided for local testing but is not needed when deploying to Railway,
+which handles static file serving automatically for Vite applications.

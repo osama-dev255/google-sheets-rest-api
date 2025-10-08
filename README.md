@@ -289,6 +289,25 @@ RATE_LIMIT_MAX_REQUESTS=100
 
 **Important**: Make sure to properly escape the private key with `\n` for newlines.
 
+## 🌐 Railway Internal Services (Advanced)
+
+For better performance and security, you can deploy both the frontend and backend in the same Railway project and use internal service discovery:
+
+### Service Configuration
+```
+Railway Project
+├── google-sheets-rest-api (backend)
+│   ├── Service Name: google-sheets-rest-api
+│   ├── Internal URL: google-sheets-rest-api.railway.internal:3000
+│   └── Port: 3000
+│
+└── frontend (dashboard)
+    ├── Root Directory: /frontend
+    └── Internal communication with backend via service discovery
+```
+
+The frontend automatically detects when it's running in Railway and uses the internal service URL for better performance.
+
 ## 🖥️ Frontend Dashboard
 
 This repository also includes a React-based frontend dashboard for interacting with the Google Sheets API.
