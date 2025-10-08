@@ -22,10 +22,30 @@ function validateEnvironment(): EnvironmentConfig {
     throw new Error(errorMessage);
   }
 
-  return {
+  // Process private key to ensure proper formatting
+  let privateKey = process.env.GOOGLE_SHEETS_PRIVATE_KEY || '';
+  
+  // Log key length for debugging (without exposing the key)
+  logger.info('Private key processing', { 
+    keyLength: privateKey.length,
+    hasBegin: privateKey.includes('-----BEGIN'),
+    hasEnd: privateKey.includes('-----END')
+  });
+  
+  // Replace escaped newlines and trim
+  privateKey = privateKey.replace(/\\\\n/g, '\n').trim();
+  
+  // Additional validation
+  if (!privateKey.includes('-----BEGIN PRIVATE KEY-----') || 
+      !privateKey.includes('-----END PRIVATE KEY-----')) {
+    logger.error('Private key format appears invalid');
+    throw new Error('Invalid private key format');
+  }
+
+  const config: EnvironmentConfig = {
     NODE_ENV: (process.env.NODE_ENV as EnvironmentConfig['NODE_ENV']) || 'development',
     PORT: parseInt(process.env.PORT || '3000', 10),
-    GOOGLE_SHEETS_PRIVATE_KEY: process.env.GOOGLE_SHEETS_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+    GOOGLE_SHEETS_PRIVATE_KEY: privateKey,
     GOOGLE_SHEETS_CLIENT_EMAIL: process.env.GOOGLE_SHEETS_CLIENT_EMAIL!,
     GOOGLE_SHEETS_PROJECT_ID: process.env.GOOGLE_SHEETS_PROJECT_ID!,
     GOOGLE_SHEETS_SPREADSHEET_ID: process.env.GOOGLE_SHEETS_SPREADSHEET_ID!,
@@ -33,6 +53,8 @@ function validateEnvironment(): EnvironmentConfig {
     RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
     RATE_LIMIT_MAX_REQUESTS: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
   };
+  
+  return config;
 }
 
 // Export validated configuration

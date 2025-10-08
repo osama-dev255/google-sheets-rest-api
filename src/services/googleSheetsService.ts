@@ -24,6 +24,13 @@ export class GoogleSheetsService {
    * Create Google Auth JWT client
    */
   private createAuthClient(): JWT {
+    // Log credential info for debugging (without exposing the key)
+    logger.info('Creating Google Auth client', {
+      clientEmail: config.GOOGLE_SHEETS_CLIENT_EMAIL,
+      projectId: config.GOOGLE_SHEETS_PROJECT_ID,
+      keyLength: config.GOOGLE_SHEETS_PRIVATE_KEY.length,
+    });
+
     const credentials: Partial<GoogleSheetsCredentials> = {
       type: 'service_account',
       project_id: config.GOOGLE_SHEETS_PROJECT_ID,
@@ -34,16 +41,41 @@ export class GoogleSheetsService {
       auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
     };
 
-    const auth = new JWT({
-      email: credentials.client_email || '',
-      key: credentials.private_key || '',
-      scopes: [
-        'https://www.googleapis.com/auth/spreadsheets',
-        'https://www.googleapis.com/auth/drive.readonly',
-      ],
-    });
+    // Validate credentials before creating JWT
+    if (!credentials.private_key || credentials.private_key.length < 100) {
+      logger.error('Invalid private key', { 
+        keyLength: credentials.private_key?.length || 0,
+        hasBegin: credentials.private_key?.includes('-----BEGIN') || false,
+        hasEnd: credentials.private_key?.includes('-----END') || false
+      });
+      throw new Error('Invalid Google Sheets private key');
+    }
 
-    return auth;
+    if (!credentials.client_email || !credentials.client_email.includes('@')) {
+      logger.error('Invalid client email', { email: credentials.client_email });
+      throw new Error('Invalid Google Sheets client email');
+    }
+
+    try {
+      const auth = new JWT({
+        email: credentials.client_email,
+        key: credentials.private_key,
+        scopes: [
+          'https://www.googleapis.com/auth/spreadsheets',
+          'https://www.googleapis.com/auth/drive.readonly',
+        ],
+      });
+
+      logger.info('Google Auth client created successfully');
+      return auth;
+    } catch (error: any) {
+      logger.error('Failed to create Google Auth client', {
+        error: error.message,
+        stack: error.stack,
+        email: credentials.client_email,
+      });
+      throw new Error(`Failed to create Google Auth client: ${error.message}`);
+    }
   }
 
   /**
