@@ -1,18 +1,8 @@
 // API configuration
-// Using a function to determine the base URL based on environment
-const getApiBaseUrl = () => {
-  // For Railway internal services
-  if (typeof window !== 'undefined' && window.location.hostname.includes('railway.app')) {
-    // Check if we're in the same Railway project
-    // This would be the internal service URL
-    return 'http://google-sheets-rest-api.railway.internal:3000';
-  }
-  
-  // Default to production URL
-  return 'https://google-sheets-rest-api-production.up.railway.app';
-};
-
-const API_BASE_URL = getApiBaseUrl();
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 
+                    (typeof window !== 'undefined' && window.location.hostname.includes('railway.app') 
+                      ? 'http://google-sheets-rest-api.railway.internal:3000'
+                      : 'https://google-sheets-rest-api-production.up.railway.app');
 
 export const API_ENDPOINTS = {
   HEALTH: `${API_BASE_URL}/health`,

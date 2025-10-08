@@ -23,12 +23,31 @@ A React dashboard for interacting with the Google Sheets REST API.
    npm install
    ```
 
-2. Start the development server:
+2. Create environment file:
+   ```bash
+   cp .env.example .env
+   ```
+   Then edit `.env` to set your backend URL
+
+3. Start the development server:
    ```bash
    npm run dev
    ```
 
-3. Open your browser to http://localhost:5178 (or the next available port)
+4. Open your browser to http://localhost:5178 (or the next available port)
+
+## Environment Variables
+
+The frontend uses the following environment variables:
+
+```env
+# Backend API URL
+VITE_BACKEND_URL=http://localhost:3000
+```
+
+For Railway deployment, you can set this in the Railway dashboard:
+- `VITE_BACKEND_URL=http://google-sheets-rest-api.railway.internal:3000` (for internal services)
+- `VITE_BACKEND_URL=https://your-backend-url.railway.app` (for external services)
 
 ## Building for Production
 
@@ -72,18 +91,21 @@ Railway automatically detects Vite applications and handles the build process:
 2. Create a new project in Railway
 3. Connect your GitHub repository
 4. Set the root directory to `/frontend` in Railway settings
-5. Railway will automatically:
+5. Set environment variables in Railway dashboard:
+   - `VITE_BACKEND_URL=http://google-sheets-rest-api.railway.internal:3000` (if using internal services)
+6. Railway will automatically:
    - Detect the Vite project
    - Run `npm run build` to build the application
    - Serve the static files automatically (no custom server needed)
 
-### Environment Variables
+### Environment Variables in Railway
 
-The frontend connects to your deployed backend API at:
-`https://google-sheets-rest-api-production.up.railway.app`
+In Railway Dashboard → Your Project → Variables:
+```
+VITE_BACKEND_URL=http://google-sheets-rest-api.railway.internal:3000
+```
 
-If you're using internal services in the same Railway project, the frontend will automatically detect this and use:
-`http://google-sheets-rest-api.railway.internal:3000`
+If your frontend and backend are in the same Railway project and the backend service is named `google-sheets-rest-api`, use the internal URL for better performance.
 
 ## Available Scripts
 
