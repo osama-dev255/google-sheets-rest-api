@@ -289,6 +289,65 @@ RATE_LIMIT_MAX_REQUESTS=100
 
 **Important**: Make sure to properly escape the private key with `\n` for newlines.
 
+## 🖥️ Frontend Dashboard
+
+This repository also includes a React-based frontend dashboard for interacting with the Google Sheets API.
+
+### Features
+- Dashboard overview with health status
+- Browse all sheets and their data
+- View detailed spreadsheet metadata
+- Responsive design for all devices
+
+### Getting Started with Frontend
+
+1. **Navigate to the frontend directory**:
+   ```bash
+   cd frontend
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Start development server**:
+   ```bash
+   npm run dev
+   ```
+
+4. **Build for production**:
+   ```bash
+   npm run build
+   ```
+
+The frontend will be available at `http://localhost:5178` (or the next available port).
+
+### Deployment
+The frontend can be deployed to any platform:
+
+#### Railway Deployment (Recommended)
+1. Push your frontend code to a GitHub repository
+2. Create a new project in Railway
+3. Connect your GitHub repository
+4. Railway will automatically:
+   - Build your frontend with `npm run build`
+   - Serve it using the Express server
+   - Deploy to `https://your-frontend-app.up.railway.app`
+
+#### Docker Deployment
+```bash
+# Build and run with Docker
+docker build -t google-sheets-dashboard ./frontend
+docker run -p 3000:3000 google-sheets-dashboard
+```
+
+#### Static Hosting (Netlify, Vercel, etc.)
+- Build command: `npm run build`
+- Publish directory: `dist`
+
+See `frontend/DEPLOYMENT.md` for detailed instructions.
+
 ## 🧪 Testing
 
 Test your API using tools like:
