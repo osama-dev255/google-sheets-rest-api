@@ -14,6 +14,10 @@ class Server {
   constructor() {
     this.app = express();
     this.port = config.PORT;
+    
+    // Trust proxy for Railway deployment
+    this.app.set('trust proxy', 1);
+    
     this.initializeMiddleware();
     this.initializeRoutes();
     this.initializeErrorHandling();
