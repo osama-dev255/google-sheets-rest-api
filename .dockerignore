@@ -2,12 +2,6 @@
 node_modules/
 npm-debug.log*
 
-# Development files
-src/
-*.ts
-tsconfig.json
-nodemon.json
-
 # Environment files
 .env
 .env.local
@@ -46,3 +40,6 @@ tests/
 *.test.ts
 *.spec.js
 *.spec.ts
+
+# Build output (we'll generate this in container)
+dist/
