@@ -202,7 +202,8 @@ export function AddPurchaseForm() {
     try {
       // Check for any items with missing fields and provide specific error
       const invalidItems = purchaseItems.filter(item => 
-        !item.productName || item.quantity <= 0 || item.cost < 0 || !item.supplier
+        !item.productName || item.quantity <= 0 || !item.supplier || 
+        item.cost === null || item.cost === undefined || isNaN(item.cost) || item.cost < 0
       );
       
       if (invalidItems.length > 0) {
@@ -211,7 +212,11 @@ export function AddPurchaseForm() {
           const missing: string[] = [];
           if (!item.productName) missing.push('product');
           if (item.quantity <= 0) missing.push('quantity');
-          if (item.cost < 0) missing.push('cost');
+          if (item.cost === null || item.cost === undefined || isNaN(item.cost)) {
+            missing.push('cost (required)');
+          } else if (item.cost < 0) {
+            missing.push('cost (must be positive)');
+          }
           if (!item.supplier) missing.push('supplier');
           missingFields.push(`Item "${item.productName || 'unnamed'}": missing ${missing.join(', ')}`);
         });
