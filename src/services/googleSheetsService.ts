@@ -305,6 +305,56 @@ export class GoogleSheetsService {
       throw new Error(`Failed to clear sheet data: ${error?.message || 'Unknown error'}`);
     }
   }
+
+  /**
+   * Rename a sheet
+   */
+  async renameSheet(oldName: string, newName: string): Promise<void> {
+    try {
+      logger.debug('Renaming sheet', {
+        spreadsheetId: this.spreadsheetId,
+        oldName,
+        newName,
+      });
+
+      // First, get the spreadsheet metadata to find the sheet ID
+      const metadata = await this.getSpreadsheetMetadata();
+      const sheet = metadata.sheets.find(s => s.title === oldName);
+      
+      if (!sheet) {
+        throw new Error(`Sheet with name "${oldName}" not found`);
+      }
+
+      // Use batchUpdate to rename the sheet
+      await this.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: this.spreadsheetId,
+        requestBody: {
+          requests: [{
+            updateSheetProperties: {
+              properties: {
+                sheetId: sheet.sheetId,
+                title: newName,
+              },
+              fields: 'title',
+            },
+          }],
+        },
+      });
+
+      logger.info('Sheet renamed successfully', { 
+        oldName, 
+        newName,
+        sheetId: sheet.sheetId,
+      });
+    } catch (error: any) {
+      logger.error('Failed to rename sheet', { 
+        oldName,
+        newName,
+        error: error?.message || 'Unknown error'
+      });
+      throw new Error(`Failed to rename sheet: ${error?.message || 'Unknown error'}`);
+    }
+  }
 }
 
 // Export singleton instance

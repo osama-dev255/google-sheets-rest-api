@@ -1,4 +1,4 @@
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
@@ -10,6 +10,12 @@ export interface ApiResponse<T = any> {
 export interface SpreadsheetMetadata {
   title: string;
   sheets: SheetInfo[];
+  spreadsheetId?: string;
+  locale?: string;
+  timeZone?: string;
+  properties?: {
+    modifiedTime?: string;
+  };
 }
 
 export interface SheetInfo {
@@ -21,12 +27,15 @@ export interface SheetInfo {
     rowCount: number;
     columnCount: number;
   };
+  properties?: {
+    hidden?: boolean;
+  };
 }
 
 export interface SheetData {
   range: string;
   majorDimension: string;
-  values: any[][];
+  values: unknown[][];
 }
 
 export interface AllSheetsData {

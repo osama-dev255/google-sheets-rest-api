@@ -1,36 +1,26 @@
-import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import cors from 'cors';
-
-// Create __dirname equivalent for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const express = require('express');
+const path = require('path');
+const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
-// Enable CORS for all routes
+// Middleware
 app.use(cors());
+app.use(express.json());
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Frontend server is healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-  });
-});
-
-// Serve static files from the dist directory
+// Serve static files from the React app build directory
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Handle SPA routing - send all requests to index.html
+// API routes would go here if we had any
+// For now, we're just serving the React app
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(PORT, () => {
-  console.log(`Frontend server running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { healthCheck } from '../services/apiService';
-import type { HealthCheckResponse } from '../types';
+import { healthCheck } from '@/services/apiService';
+import type { HealthCheckResponse } from '@/types';
 
 const HealthStatus: React.FC = () => {
   const [health, setHealth] = useState<HealthCheckResponse | null>(null);
@@ -22,9 +22,10 @@ const HealthStatus: React.FC = () => {
           setError('Invalid health data format');
         }
         setError(null);
-      } catch (err: any) {
-        setError('Failed to fetch health status: ' + (err.message || 'Unknown error'));
-        console.error('Health check error:', err);
+      } catch (err: unknown) {
+        const error = err as Error;
+        setError('Failed to fetch health status: ' + (error.message || 'Unknown error'));
+        console.error('Health check error:', error);
       } finally {
         setLoading(false);
       }

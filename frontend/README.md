@@ -1,140 +1,191 @@
-# Google Sheets Dashboard
+# Railway POS System
 
-A React dashboard for interacting with the Google Sheets REST API.
+A professional Point of Sale (POS) system built with React, TypeScript, Tailwind CSS, and shadcn/ui components. This application connects to a Google Sheets backend for data storage and management, with a modern UI featuring animations and a professional splash screen.
+
+## Recent Enhancements
+
+- ✨ **Splash Screen**: Added a professional animated splash screen
+- 🎨 **Redesigned Login Page**: Modern glass-morphism design with enhanced UX
+- 🌟 **UI Animations**: Smooth framer-motion animations throughout the application
+- 🚀 **Improved User Experience**: Enhanced transitions and visual feedback
+- 👥 **Enhanced User Management**: Comprehensive user management guide and improved authentication
 
 ## Features
 
-- View spreadsheet metadata
-- Browse all sheets and their data
-- Detailed sheet information
-- Responsive design
+- 🛒 **Complete POS Functionality**: Product management, sales processing, and inventory tracking
+- 👤 **Authentication & Authorization**: Role-based access control (admin, manager, cashier)
+- 📱 **Responsive Design**: Works on desktop, tablet, and mobile devices
+- 🖨️ **Receipt Printing**: Generate and print professional receipts
+- 📊 **Data Visualization**: Charts and reports for business insights
+- 📤 **Export Capabilities**: Export data to CSV, Excel, and JSON formats
+- 📋 **Pagination**: Efficient data handling for large datasets
+- 🎨 **Modern UI**: Beautiful interface built with Tailwind CSS and shadcn/ui
+- ✨ **Animated Experience**: Smooth animations powered by framer-motion
+- 🚀 **Professional Branding**: Cohesive design language throughout the application
 
-## Tech Stack
+## Prerequisites
 
-- React 18 with TypeScript
-- Vite for fast development
-- React Router for navigation
-- Axios for API requests
+- Node.js (version 16 or higher)
+- npm or yarn
+- Git
 
 ## Getting Started
 
-1. Install dependencies:
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone <your-repository-url>
+   ```
+
+2. Navigate to the project directory:
+   ```bash
+   cd frontend
+   ```
+
+3. Install dependencies:
    ```bash
    npm install
    ```
 
-2. Create environment file:
-   ```bash
-   cp .env.example .env
-   ```
-   Then edit `.env` to set your backend URL
+### Development
 
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-4. Open your browser to http://localhost:5178 (or the next available port)
-
-## Environment Variables
-
-The frontend uses the following environment variables:
-
-```env
-# Backend API URL
-VITE_BACKEND_URL=http://localhost:3000
-```
-
-For production deployments:
-- Netlify: Set in Netlify Dashboard → Site settings → Environment variables
-- `VITE_BACKEND_URL=https://google-sheets-rest-api-production.up.railway.app`
-
-## Building for Production
-
-1. Build the application:
-   ```bash
-   npm run build
-   ```
-
-2. This will create a `dist` folder with all the optimized files
-
-## Running in Production
-
-For local testing:
-
+To start the development server:
 ```bash
-# Build and preview the production build
-npm run build
-npm run preview
+npm run dev
 ```
+
+The application will be available at `http://localhost:5173`.
+
+### Environment Variables
+
+Create a `.env` file in the root directory with the following:
+```env
+VITE_BACKEND_URL=https://google-sheets-rest-api-production.up.railway.app
+```
+
+### Building for Production
+
+To create a production build:
+```bash
+npm run build
+```
+
+The build files will be output to the `dist` directory.
 
 ## Project Structure
 
 ```
 src/
-├── components/     # Reusable UI components
-├── config/         # Configuration files
-├── pages/          # Page components
-├── services/       # API service layer
-├── types/          # TypeScript interfaces
-├── App.tsx         # Main app component
-└── main.tsx        # Entry point
+├── components/           # Reusable UI components
+│   ├── SplashScreen/     # Splash screen component
+│   ├── ui/               # shadcn/ui components
+│   └── ...               # Other components
+├── config/               # Configuration files
+├── contexts/             # React contexts
+├── hooks/                # Custom hooks
+├── lib/                  # Utility functions
+├── pages/                # Page components
+├── services/             # API service functions
+├── types/                # TypeScript types
+├── App.tsx               # Main application component
+└── main.tsx              # Application entry point
 ```
 
-## Deployment
+## Technologies Used
 
-### Netlify Deployment (Recommended - Easiest)
+- [React 18](https://reactjs.org/) with TypeScript
+- [Tailwind CSS](https://tailwindcss.com/) for styling
+- [shadcn/ui](https://ui.shadcn.com/) components
+- [React Router](https://reactrouter.com/) for navigation
+- [Axios](https://axios-http.com/) for HTTP requests
+- [Recharts](https://recharts.org/) for data visualization
+- [Lucide React](https://lucide.dev/) for icons
+- [Framer Motion](https://www.framer.com/motion/) for animations
+- [Vite](https://vitejs.dev/) for build tooling
 
-Netlify is the simplest option for deploying this static React application:
+## Backend Integration
 
-1. Push your code to GitHub
-2. Visit [netlify.com](https://netlify.com) and sign in
-3. Click "Add new site" → "Import an existing project"
-4. Select your GitHub repository
-5. Set these build settings:
-   - Base directory: `frontend`
-   - Build command: `npm run build`
-   - Publish directory: `dist`
-6. Add environment variable in Netlify Dashboard:
-   - `VITE_BACKEND_URL=https://google-sheets-rest-api-production.up.railway.app`
-7. Click "Deploy site"
+The frontend connects to a Google Sheets REST API backend hosted at:
+`https://google-sheets-rest-api-production.up.railway.app`
 
-### Manual Netlify Deployment
+### API Endpoints
 
-```bash
-# Install Netlify CLI
-npm install -g netlify-cli
+- `GET /api/v1/sheets/metadata` - Get spreadsheet metadata
+- `GET /api/v1/sheets/all` - Get all sheets data
+- `GET /api/v1/sheets/{sheetName}` - Get specific sheet data
+- `POST /api/v1/sheets/{sheetName}/append` - Append data to sheet
+- `PUT /api/v1/sheets/{sheetName}/range/{range}` - Update sheet range
+- `DELETE /api/v1/sheets/{sheetName}/clear` - Clear sheet data
 
-# Build your project
-npm run build
+## User Management
 
-# Deploy to Netlify
-netlify deploy --prod
-```
+For detailed information about user management, including:
+- Role-based permissions
+- Adding and modifying users
+- Security best practices
+- Troubleshooting common issues
 
-### Railway Deployment (Alternative)
-
-If you prefer Railway:
-
-1. Push your code to GitHub
-2. Create a new project in Railway
-3. Connect your GitHub repository
-4. Set the root directory to `/frontend` in Railway settings
-5. Set environment variables in Railway dashboard:
-   - `VITE_BACKEND_URL=https://google-sheets-rest-api-production.up.railway.app`
-6. Railway will automatically:
-   - Detect the Vite project
-   - Run `npm run build` to build the application
-   - Serve the static files automatically
+Please refer to the [User Management Guide](USER_MANAGEMENT_GUIDE.md).
 
 ## Available Scripts
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
-- `npm run preview` - Preview production build
+- `npm run preview` - Preview production build locally
 - `npm run lint` - Run ESLint
+- `npm run health` - Check backend health
 
-## Note About server.js
+## Deployment
 
-The `server.js` file is provided for local testing but is not needed when deploying to Netlify or Railway,
-which handle static file serving automatically for Vite applications.
+### GitHub Pages
+
+1. Update the `homepage` field in `package.json` to your GitHub Pages URL:
+   ```json
+   "homepage": "https://<your-username>.github.io/<repository-name>"
+   ```
+
+2. Deploy to GitHub Pages:
+   ```bash
+   npm run build
+   npx gh-pages -d dist
+   ```
+
+### Netlify
+
+1. Push your code to GitHub
+2. Connect your repository to Netlify
+3. Set the build command to: `npm run build`
+4. Set the publish directory to: `dist`
+5. Add the following environment variable in Netlify:
+   - Key: `VITE_BACKEND_URL`
+   - Value: `https://google-sheets-rest-api-production.up.railway.app`
+
+## Recent Updates
+
+### Splash Screen & Login Page Enhancements
+- Added a professional animated splash screen with gradient effects
+- Completely redesigned the login page with modern glass-morphism design
+- Implemented smooth animations using framer-motion throughout the application
+- Enhanced dashboard with staggered animations for improved user experience
+
+### UI/UX Improvements
+- Improved visual hierarchy and spacing
+- Added better feedback for user interactions
+- Enhanced form elements with improved styling
+- Added professional loading states and transitions
+
+## Learn More
+
+To learn more about the technologies used in this project:
+
+- [React Documentation](https://reactjs.org/)
+- [TypeScript Documentation](https://www.typescriptlang.org/)
+- [Tailwind CSS Documentation](https://tailwindcss.com/)
+- [shadcn/ui Documentation](https://ui.shadcn.com/)
+- [Framer Motion Documentation](https://www.framer.com/docs/)
+- [Vite Documentation](https://vitejs.dev/)
+
+## Support
+
+For issues and feature requests, please [create an issue](../../issues) on GitHub.

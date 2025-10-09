@@ -1,102 +1,96 @@
-# Frontend Deployment Guide
+# Deployment Guide
 
-## Deploying to Railway
+## Netlify Deployment
 
 ### Prerequisites
-1. Railway account ([railway.app](https://railway.app))
-2. GitHub repository with your frontend code
-3. Backend API deployed and accessible
+- A Netlify account
+- This repository pushed to a Git provider (GitHub, GitLab, or Bitbucket)
 
 ### Deployment Steps
 
-1. **Prepare Your Repository**
+1. **Connect to Netlify**
+   - Go to [Netlify](https://app.netlify.com/)
+   - Click "New site from Git"
+   - Connect your Git provider and select this repository
+
+2. **Configure Build Settings**
+   - Set the build command to: `npm run build`
+   - Set the publish directory to: `dist`
+   - The site will automatically deploy when you push to the main branch
+
+3. **Environment Variables**
+   Add the following environment variable in Netlify:
+   - Key: `VITE_BACKEND_URL`
+   - Value: `https://google-sheets-rest-api-production.up.railway.app`
+
+4. **Domain Settings (Optional)**
+   - Go to "Domain settings" in your Netlify site dashboard
+   - Add a custom domain if desired
+   - Netlify will provide a free subdomain by default
+
+### Manual Deployment
+
+If you prefer to deploy manually:
+
+1. **Build the Project**
    ```bash
-   # Make sure all changes are committed
-   git add .
-   git commit -m "Prepare frontend for deployment"
-   git push origin main
+   npm run build
    ```
 
-2. **Connect Railway to GitHub**
-   - Log in to Railway
-   - Click "New Project"
-   - Select "Deploy from GitHub repo"
-   - Choose your repository
+2. **Deploy**
+   - Upload the contents of the `dist` directory to your hosting provider
+   - Ensure your hosting provider is configured to serve `index.html` for all routes (SPA routing)
 
-3. **Configure Environment Variables**
-   - In Railway dashboard, go to your project
-   - Click on "Variables" tab
-   - No specific environment variables are required for the frontend
+## Environment Configuration
 
-4. **Set Build Configuration**
-   Railway will automatically detect the Vite project and use the following configuration:
-   - Build command: `npm run build`
-   - Output directory: `dist`
-   - Start command: `npm start`
+The application uses the following environment variable:
 
-5. **Deploy**
-   - Railway will automatically build and deploy your application
-   - The build process will:
-     1. Install dependencies with `npm install`
-     2. Build the frontend with `npm run build`
-     3. Start the server with `npm start`
-   - Your app will be available at `https://your-app-name.up.railway.app`
+- `VITE_BACKEND_URL`: The base URL for the backend API
+  - Default: `https://google-sheets-rest-api-production.up.railway.app`
 
-### Custom Domain (Optional)
-1. In your Railway project, go to "Settings"
-2. Click "Custom Domains"
-3. Add your custom domain
-4. Follow the DNS configuration instructions
+## Troubleshooting
 
-### Environment Variables
-The frontend doesn't require any environment variables as it connects directly to your deployed API.
+### Common Issues
 
-### Troubleshooting
+1. **Blank Page After Deployment**
+   - Ensure the `homepage` field in `package.json` is set to `"."`
+   - Check that the publish directory is set to `dist`
+   - Verify that redirects are configured correctly in `netlify.toml`
 
-#### Common Issues
-1. **Build Failures**
-   - Ensure all dependencies are properly listed in package.json
-   - Check that the build command `npm run build` works locally
-   - Verify that the start command `npm start` works locally
+2. **API Connection Issues**
+   - Confirm that `VITE_BACKEND_URL` is set correctly
+   - Check that the backend API is accessible
+   - Verify CORS settings on the backend
 
-2. **Runtime Errors**
-   - Check Railway logs for detailed error messages
-   - Ensure the server.js file is correctly configured
-   - Verify that all required dependencies are installed
+3. **Build Failures**
+   - Ensure Node.js version 16 or higher is used
+   - Check that all dependencies are installed correctly
+   - Review the build logs for specific error messages
 
-3. **CORS Issues**
-   - The server already includes CORS middleware
-   - If you encounter CORS issues, verify your backend CORS configuration
+### Testing Deployment
 
-#### Checking Logs
-1. In Railway dashboard, go to your project
-2. Click on your service
-3. Click on "Logs" tab to view real-time logs
+After deployment, verify that:
 
-### Local Development vs Production
-- **Development**: `npm run dev` (Vite development server)
-- **Production**: `npm run build` + `npm start` (Static files served by Express)
+1. The site loads correctly
+2. All navigation works (including direct URLs to pages)
+3. API calls are successful
+4. Authentication works as expected
+5. All UI components render properly
 
-### Updating Your Deployment
-1. Make changes to your code
-2. Commit and push to GitHub
-3. Railway will automatically redeploy your application
+## Post-Deployment
 
-### Health Check
-The frontend includes a simple health check endpoint that returns a 200 status for all requests.
+### Monitoring
+- Set up monitoring for your Netlify site
+- Monitor backend API health using the health check endpoint
+- Set up error tracking if needed
 
-## Alternative Deployment Options
+### Updates
+- Push to the main branch to automatically trigger a new deployment
+- Netlify will automatically build and deploy the new version
+- Rollback to previous deployments is available in the Netlify dashboard
 
-### Netlify
-1. Sign in to Netlify
-2. Click "New site from Git"
-3. Connect your repository
-4. Set the build command to `npm run build`
-5. Set the publish directory to `dist`
+## Support
 
-### Vercel
-1. Sign in to Vercel
-2. Create a new project
-3. Connect your Git repository
-4. Vercel will automatically detect the Vite project
-5. Set the output directory to `dist`
+For deployment issues, contact the development team or refer to:
+- [Netlify Documentation](https://docs.netlify.com/)
+- [Vite Deployment Guide](https://vitejs.dev/guide/static-deploy.html)
