@@ -213,7 +213,8 @@ export function AddPurchaseForm() {
       const purchases = validItems.map(item => ({
         productName: item.productName,
         quantity: item.quantity,
-        cost: item.cost
+        cost: item.cost,
+        supplier: item.supplier // Include supplier field
       }));
       
       // Add stock through purchases
