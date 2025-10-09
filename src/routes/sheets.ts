@@ -234,9 +234,8 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
     const inventoryHeaderRow = inventoryRows[0];
     const inventoryProductNameIndex = inventoryHeaderRow.indexOf('PRODUCT');
     const inventoryCurrentStockIndex = inventoryHeaderRow.indexOf('CURRENTSTOCK');
-    const inventoryPriceIndex = inventoryHeaderRow.indexOf('PRICE'); // Add price index
     
-    if (inventoryProductNameIndex === -1 || inventoryCurrentStockIndex === -1 || inventoryPriceIndex === -1) {
+    if (inventoryProductNameIndex === -1 || inventoryCurrentStockIndex === -1) {
       return sendErrorResponse(res, 'Required columns not found in Inventory sheet', 400);
     }
     
@@ -272,7 +271,7 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
     const productsSheetUpdates = [];
     
     for (const purchase of purchases) {
-      // Update Inventory sheet (increase stock and update price)
+      // Update Inventory sheet (increase stock only)
       const inventoryProductInfo = inventoryProductMap.get(purchase.productName);
       if (inventoryProductInfo) {
         const currentStock = parseInt(inventoryProductInfo.rowData[inventoryCurrentStockIndex]) || 0;
@@ -281,12 +280,6 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
         inventorySheetUpdates.push({
           range: `Inventory!${String.fromCharCode(65 + inventoryCurrentStockIndex)}${inventoryProductInfo.rowIndex + 1}`,
           values: [[newStock.toString()]]
-        });
-        
-        // Update price in inventory sheet
-        inventorySheetUpdates.push({
-          range: `Inventory!${String.fromCharCode(65 + inventoryPriceIndex)}${inventoryProductInfo.rowIndex + 1}`,
-          values: [[purchase.cost.toString()]]
         });
       }
       
