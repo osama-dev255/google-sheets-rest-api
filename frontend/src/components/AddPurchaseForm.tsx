@@ -28,7 +28,7 @@ interface PurchaseItem {
   cost: number;
 }
 
-// Custom searchable dropdown component
+// Custom searchable dropdown component with Radix UI theme
 function SearchableProductSelect({
   products,
   value,
@@ -62,21 +62,35 @@ function SearchableProductSelect({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
+  // Find selected product details for display
+  const selectedProduct = products.find(p => p.name === value);
+
   return (
-    <div className="searchable-select relative">
+    <div className="searchable-select w-full">
       <div 
         className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className={value ? "text-foreground" : "text-muted-foreground"}>
-          {value || placeholder}
-        </span>
-        <span className="ml-2">▼</span>
+        <div className="flex-1 truncate">
+          {value ? (
+            <div>
+              <div className="font-medium truncate">{value}</div>
+              {selectedProduct && (
+                <div className="text-xs text-muted-foreground truncate">
+                  Stock: {selectedProduct.currentStock} | Location: {selectedProduct.location}
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-muted-foreground">{placeholder}</span>
+          )}
+        </div>
+        <span className="ml-2 text-muted-foreground">▼</span>
       </div>
       
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
-          <div className="p-2 border-b">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-50 max-h-60 overflow-hidden">
+          <div className="p-2 border-b border-border">
             <Input
               placeholder="Search products..."
               value={searchTerm}
@@ -86,31 +100,31 @@ function SearchableProductSelect({
             />
           </div>
           
-          <div className="py-1">
+          <div className="py-1 max-h-48 overflow-y-auto">
             {filteredProducts.length > 0 ? (
               filteredProducts.map((product) => (
                 <div
                   key={product.id}
-                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                  className="px-3 py-2 hover:bg-accent hover:text-accent-foreground cursor-pointer flex justify-between items-center"
                   onClick={() => {
                     onValueChange(product.name);
                     setIsOpen(false);
                     setSearchTerm('');
                   }}
                 >
-                  <div>
+                  <div className="flex-1">
                     <div className="font-medium">{product.name}</div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-xs text-muted-foreground">
                       ID: {product.id} | Category: {product.category} | Stock: {product.currentStock}
                     </div>
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-xs text-muted-foreground ml-2">
                     {product.location}
                   </div>
                 </div>
               ))
             ) : (
-              <div className="px-3 py-2 text-gray-500">No products found</div>
+              <div className="px-3 py-2 text-muted-foreground text-center">No products found</div>
             )}
           </div>
         </div>
