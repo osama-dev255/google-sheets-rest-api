@@ -19,17 +19,14 @@ router.get('/', (req: Request, res: Response) => {
   const routes = {
     'GET /metadata': 'Get spreadsheet metadata',
     'GET /all': 'Get data from all sheets',
+    'POST /inventory/update-quantities': 'Update inventory quantities based on sales/purchases',
+    'POST /purchases/add-stock': 'Add stock through purchase transactions',
+    'POST /rename': 'Rename a sheet',
     'GET /:sheetName': 'Get data from a specific sheet',
     'GET /:sheetName/range/:range': 'Get data from a specific range',
     'PUT /:sheetName/range/:range': 'Update data in a specific range',
     'POST /:sheetName/append': 'Append data to a sheet',
     'DELETE /:sheetName/clear': 'Clear data from a sheet or range',
-    'POST /inventory/update-quantities': 'Update inventory quantities based on sales/purchases',
-    'POST /purchases/add-stock': 'Add stock through purchase transactions',
-    'POST /rename': 'Rename a sheet',
-    'POST /inventory/update-quantities': 'Update inventory quantities based on sales/purchases',
-    'POST /purchases/add-stock': 'Add stock through purchase transactions',
-    'POST /rename': 'Rename a sheet',
   };
   
   sendSuccessResponse(res, routes, 'Available Google Sheets API routes');
@@ -482,33 +479,6 @@ router.delete('/:sheetName/clear', asyncHandler(async (req: Request, res: Respon
       : `Sheet "${sheetName}" cleared successfully`;
       
     sendSuccessResponse(res, null, message);
-  } catch (error) {
-    const { message, statusCode } = handleError(error, req);
-    sendErrorResponse(res, message, statusCode);
-  }
-}));
-
-/**
- * POST /api/v1/sheets/rename
- * Rename a sheet
- * Body: {
- *   oldName: string;
- *   newName: string;
- * }
- */
-router.post('/rename', asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const { oldName, newName } = req.body;
-    
-    if (!oldName || !newName) {
-      return sendErrorResponse(res, 'Both oldName and newName are required', 400);
-    }
-    
-    logger.debug('Renaming sheet', { oldName, newName });
-    
-    await googleSheetsService.renameSheet(oldName, newName);
-    
-    sendSuccessResponse(res, { oldName, newName }, 'Sheet renamed successfully');
   } catch (error) {
     const { message, statusCode } = handleError(error, req);
     sendErrorResponse(res, message, statusCode);
