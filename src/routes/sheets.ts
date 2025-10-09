@@ -12,6 +12,30 @@ import logger from '../config/logger';
 const router = Router();
 
 /**
+ * GET /api/v1/sheets
+ * List all available routes and their descriptions
+ */
+router.get('/', (req: Request, res: Response) => {
+  const routes = {
+    'GET /metadata': 'Get spreadsheet metadata',
+    'GET /all': 'Get data from all sheets',
+    'GET /:sheetName': 'Get data from a specific sheet',
+    'GET /:sheetName/range/:range': 'Get data from a specific range',
+    'PUT /:sheetName/range/:range': 'Update data in a specific range',
+    'POST /:sheetName/append': 'Append data to a sheet',
+    'DELETE /:sheetName/clear': 'Clear data from a sheet or range',
+    'POST /inventory/update-quantities': 'Update inventory quantities based on sales/purchases',
+    'POST /purchases/add-stock': 'Add stock through purchase transactions',
+    'POST /rename': 'Rename a sheet',
+    'POST /inventory/update-quantities': 'Update inventory quantities based on sales/purchases',
+    'POST /purchases/add-stock': 'Add stock through purchase transactions',
+    'POST /rename': 'Rename a sheet',
+  };
+  
+  sendSuccessResponse(res, routes, 'Available Google Sheets API routes');
+});
+
+/**
  * GET /api/v1/sheets/metadata
  * Get spreadsheet metadata including all sheet names and properties
  */
@@ -37,6 +61,263 @@ router.get('/all', asyncHandler(async (req: Request, res: Response) => {
     const allData = await googleSheetsService.getAllSheetsData();
     
     sendSuccessResponse(res, allData, 'All sheets data retrieved successfully');
+  } catch (error) {
+    const { message, statusCode } = handleError(error, req);
+    sendErrorResponse(res, message, statusCode);
+  }
+}));
+
+/**
+ * POST /api/v1/sheets/inventory/update-quantities
+ * Update inventory quantities based on sales/purchases
+ * Body: {
+ *   updates: { productName: string; quantityChange: number }[]
+ * }
+ */
+router.post('/inventory/update-quantities', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { updates } = req.body;
+    
+    if (!updates || !Array.isArray(updates)) {
+      return sendErrorResponse(res, 'Updates array is required', 400);
+    }
+    
+    logger.debug('Updating inventory quantities', { updateCount: updates.length });
+    
+    // Get current inventory data
+    const inventoryData = await googleSheetsService.getSheetData('Inventory');
+    const inventoryRows = inventoryData.values || [];
+    
+    if (inventoryRows.length === 0) {
+      return sendErrorResponse(res, 'Inventory sheet is empty', 400);
+    }
+    
+    // Get current products data
+    const productsData = await googleSheetsService.getSheetData('Products');
+    const productRows = productsData.values || [];
+    
+    if (productRows.length === 0) {
+      return sendErrorResponse(res, 'Products sheet is empty', 400);
+    }
+    
+    // Process inventory sheet updates
+    const inventoryHeaderRow = inventoryRows[0];
+    const inventoryProductNameIndex = inventoryHeaderRow.indexOf('PRODUCT');
+    const inventoryCurrentStockIndex = inventoryHeaderRow.indexOf('CURRENTSTOCK');
+    const inventoryIdIndex = inventoryHeaderRow.indexOf('ID');
+    
+    if (inventoryProductNameIndex === -1 || inventoryCurrentStockIndex === -1) {
+      return sendErrorResponse(res, 'Required columns not found in Inventory sheet', 400);
+    }
+    
+    // Process products sheet updates
+    const productsHeaderRow = productRows[0];
+    const productsProductNameIndex = productsHeaderRow.indexOf('PRODUCT');
+    const productsStockIndex = productsHeaderRow.indexOf('STOCK');
+    const productsIdIndex = productsHeaderRow.indexOf('ID');
+    
+    if (productsProductNameIndex === -1 || productsStockIndex === -1) {
+      return sendErrorResponse(res, 'Required columns not found in Products sheet', 400);
+    }
+    
+    // Create maps for quick lookup
+    const inventoryProductMap = new Map();
+    for (let i = 1; i < inventoryRows.length; i++) {
+      const productName = inventoryRows[i][inventoryProductNameIndex];
+      if (productName) {
+        inventoryProductMap.set(productName, { rowIndex: i, rowData: inventoryRows[i] });
+      }
+    }
+    
+    const productsProductMap = new Map();
+    for (let i = 1; i < productRows.length; i++) {
+      const productName = productRows[i][productsProductNameIndex];
+      if (productName) {
+        productsProductMap.set(productName, { rowIndex: i, rowData: productRows[i] });
+      }
+    }
+    
+    // Prepare updates for Google Sheets
+    const inventorySheetUpdates = [];
+    const productsSheetUpdates = [];
+    
+    for (const update of updates) {
+      // Update Inventory sheet
+      const inventoryProductInfo = inventoryProductMap.get(update.productName);
+      if (inventoryProductInfo) {
+        const currentStock = parseInt(inventoryProductInfo.rowData[inventoryCurrentStockIndex]) || 0;
+        const newStock = currentStock + update.quantityChange;
+        
+        // Ensure stock doesn't go below zero
+        const finalStock = Math.max(0, newStock);
+        
+        inventorySheetUpdates.push({
+          range: `Inventory!${String.fromCharCode(65 + inventoryCurrentStockIndex)}${inventoryProductInfo.rowIndex + 1}`,
+          values: [[finalStock.toString()]]
+        });
+      }
+      
+      // Update Products sheet
+      const productsProductInfo = productsProductMap.get(update.productName);
+      if (productsProductInfo) {
+        const currentStock = parseInt(productsProductInfo.rowData[productsStockIndex]) || 0;
+        const newStock = currentStock + update.quantityChange;
+        
+        // Ensure stock doesn't go below zero
+        const finalStock = Math.max(0, newStock);
+        
+        productsSheetUpdates.push({
+          range: `Products!${String.fromCharCode(65 + productsStockIndex)}${productsProductInfo.rowIndex + 1}`,
+          values: [[finalStock.toString()]]
+        });
+      }
+    }
+    
+    // Apply all updates to Google Sheets
+    const allUpdates = [...inventorySheetUpdates, ...productsSheetUpdates];
+    for (const update of allUpdates) {
+      // Determine which sheet to update based on the range
+      const sheetName = update.range.split('!')[0];
+      const range = update.range.split('!')[1];
+      
+      await googleSheetsService.updateSheetData(
+        sheetName,
+        range,
+        update.values,
+        'USER_ENTERED'
+      );
+    }
+    
+    sendSuccessResponse(res, { 
+      updatedItems: allUpdates.length,
+      inventoryUpdates: inventorySheetUpdates.length,
+      productsUpdates: productsSheetUpdates.length
+    }, 'Inventory quantities updated successfully');
+  } catch (error) {
+    const { message, statusCode } = handleError(error, req);
+    sendErrorResponse(res, message, statusCode);
+  }
+}));
+
+// Add new endpoint for purchase transactions
+/**
+ * POST /api/v1/sheets/purchases/add-stock
+ * Add stock through purchase transactions
+ * Body: {
+ *   purchases: { productName: string; quantity: number; cost: number }[]
+ * }
+ */
+router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { purchases } = req.body;
+    
+    if (!purchases || !Array.isArray(purchases)) {
+      return sendErrorResponse(res, 'Purchases array is required', 400);
+    }
+    
+    logger.debug('Adding stock through purchases', { purchaseCount: purchases.length });
+    
+    // Get current inventory data
+    const inventoryData = await googleSheetsService.getSheetData('Inventory');
+    const inventoryRows = inventoryData.values || [];
+    
+    if (inventoryRows.length === 0) {
+      return sendErrorResponse(res, 'Inventory sheet is empty', 400);
+    }
+    
+    // Get current products data
+    const productsData = await googleSheetsService.getSheetData('Products');
+    const productRows = productsData.values || [];
+    
+    if (productRows.length === 0) {
+      return sendErrorResponse(res, 'Products sheet is empty', 400);
+    }
+    
+    // Process inventory sheet updates
+    const inventoryHeaderRow = inventoryRows[0];
+    const inventoryProductNameIndex = inventoryHeaderRow.indexOf('PRODUCT');
+    const inventoryCurrentStockIndex = inventoryHeaderRow.indexOf('CURRENTSTOCK');
+    
+    if (inventoryProductNameIndex === -1 || inventoryCurrentStockIndex === -1) {
+      return sendErrorResponse(res, 'Required columns not found in Inventory sheet', 400);
+    }
+    
+    // Process products sheet updates
+    const productsHeaderRow = productRows[0];
+    const productsProductNameIndex = productsHeaderRow.indexOf('PRODUCT');
+    const productsStockIndex = productsHeaderRow.indexOf('STOCK');
+    
+    if (productsProductNameIndex === -1 || productsStockIndex === -1) {
+      return sendErrorResponse(res, 'Required columns not found in Products sheet', 400);
+    }
+    
+    // Create maps for quick lookup
+    const inventoryProductMap = new Map();
+    for (let i = 1; i < inventoryRows.length; i++) {
+      const productName = inventoryRows[i][inventoryProductNameIndex];
+      if (productName) {
+        inventoryProductMap.set(productName, { rowIndex: i, rowData: inventoryRows[i] });
+      }
+    }
+    
+    const productsProductMap = new Map();
+    for (let i = 1; i < productRows.length; i++) {
+      const productName = productRows[i][productsProductNameIndex];
+      if (productName) {
+        productsProductMap.set(productName, { rowIndex: i, rowData: productRows[i] });
+      }
+    }
+    
+    // Prepare updates for Google Sheets
+    const inventorySheetUpdates = [];
+    const productsSheetUpdates = [];
+    
+    for (const purchase of purchases) {
+      // Update Inventory sheet (increase stock)
+      const inventoryProductInfo = inventoryProductMap.get(purchase.productName);
+      if (inventoryProductInfo) {
+        const currentStock = parseInt(inventoryProductInfo.rowData[inventoryCurrentStockIndex]) || 0;
+        const newStock = currentStock + purchase.quantity;
+        
+        inventorySheetUpdates.push({
+          range: `Inventory!${String.fromCharCode(65 + inventoryCurrentStockIndex)}${inventoryProductInfo.rowIndex + 1}`,
+          values: [[newStock.toString()]]
+        });
+      }
+      
+      // Update Products sheet (increase stock)
+      const productsProductInfo = productsProductMap.get(purchase.productName);
+      if (productsProductInfo) {
+        const currentStock = parseInt(productsProductInfo.rowData[productsStockIndex]) || 0;
+        const newStock = currentStock + purchase.quantity;
+        
+        productsSheetUpdates.push({
+          range: `Products!${String.fromCharCode(65 + productsStockIndex)}${productsProductInfo.rowIndex + 1}`,
+          values: [[newStock.toString()]]
+        });
+      }
+    }
+    
+    // Apply all updates to Google Sheets
+    const allUpdates = [...inventorySheetUpdates, ...productsSheetUpdates];
+    for (const update of allUpdates) {
+      // Determine which sheet to update based on the range
+      const sheetName = update.range.split('!')[0];
+      const range = update.range.split('!')[1];
+      
+      await googleSheetsService.updateSheetData(
+        sheetName,
+        range,
+        update.values,
+        'USER_ENTERED'
+      );
+    }
+    
+    sendSuccessResponse(res, { 
+      updatedItems: allUpdates.length,
+      inventoryUpdates: inventorySheetUpdates.length,
+      productsUpdates: productsSheetUpdates.length
+    }, 'Stock added successfully through purchases');
   } catch (error) {
     const { message, statusCode } = handleError(error, req);
     sendErrorResponse(res, message, statusCode);
@@ -208,21 +489,57 @@ router.delete('/:sheetName/clear', asyncHandler(async (req: Request, res: Respon
 }));
 
 /**
- * GET /api/v1/sheets
- * List all available routes and their descriptions
+ * POST /api/v1/sheets/rename
+ * Rename a sheet
+ * Body: {
+ *   oldName: string;
+ *   newName: string;
+ * }
  */
-router.get('/', (req: Request, res: Response) => {
-  const routes = {
-    'GET /metadata': 'Get spreadsheet metadata',
-    'GET /all': 'Get data from all sheets',
-    'GET /:sheetName': 'Get data from a specific sheet',
-    'GET /:sheetName/range/:range': 'Get data from a specific range',
-    'PUT /:sheetName/range/:range': 'Update data in a specific range',
-    'POST /:sheetName/append': 'Append data to a sheet',
-    'DELETE /:sheetName/clear': 'Clear data from a sheet or range',
-  };
-  
-  sendSuccessResponse(res, routes, 'Available Google Sheets API routes');
-});
+router.post('/rename', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { oldName, newName } = req.body;
+    
+    if (!oldName || !newName) {
+      return sendErrorResponse(res, 'Both oldName and newName are required', 400);
+    }
+    
+    logger.debug('Renaming sheet', { oldName, newName });
+    
+    await googleSheetsService.renameSheet(oldName, newName);
+    
+    sendSuccessResponse(res, { oldName, newName }, 'Sheet renamed successfully');
+  } catch (error) {
+    const { message, statusCode } = handleError(error, req);
+    sendErrorResponse(res, message, statusCode);
+  }
+}));
+
+/**
+ * POST /api/v1/sheets/rename
+ * Rename a sheet
+ * Body: {
+ *   oldName: string;
+ *   newName: string;
+ * }
+ */
+router.post('/rename', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { oldName, newName } = req.body;
+    
+    if (!oldName || !newName) {
+      return sendErrorResponse(res, 'Both oldName and newName are required', 400);
+    }
+    
+    logger.debug('Renaming sheet', { oldName, newName });
+    
+    await googleSheetsService.renameSheet(oldName, newName);
+    
+    sendSuccessResponse(res, { oldName, newName }, 'Sheet renamed successfully');
+  } catch (error) {
+    const { message, statusCode } = handleError(error, req);
+    sendErrorResponse(res, message, statusCode);
+  }
+}));
 
 export default router;
