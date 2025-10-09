@@ -1,17 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getSheetData, addStockThroughPurchases } from '@/services/apiService';
 import { formatCurrency } from '@/lib/currency';
 
-interface Product {
+interface InventoryProduct {
   id: string;
   name: string;
+  category: string;
   currentStock: number;
-  unitCost: number;
+  reorderLevel: number;
+  maxStock: number;
+  unit: string;
+  price: number;
+  location: string;
+  supplier: string;
+  lastUpdated: string;
+  status: string;
 }
 
 interface PurchaseItem {
@@ -21,8 +28,99 @@ interface PurchaseItem {
   cost: number;
 }
 
+// Custom searchable dropdown component
+function SearchableProductSelect({
+  products,
+  value,
+  onValueChange,
+  placeholder = "Select product"
+}: {
+  products: InventoryProduct[];
+  value: string;
+  onValueChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Filter products based on search term
+  const filteredProducts = products.filter(product => 
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.category.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isOpen && !(event.target as Element).closest('.searchable-select')) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  return (
+    <div className="searchable-select relative">
+      <div 
+        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={value ? "text-foreground" : "text-muted-foreground"}>
+          {value || placeholder}
+        </span>
+        <span className="ml-2">▼</span>
+      </div>
+      
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+          <div className="p-2 border-b">
+            <Input
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full"
+              autoFocus
+            />
+          </div>
+          
+          <div className="py-1">
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map((product) => (
+                <div
+                  key={product.id}
+                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                  onClick={() => {
+                    onValueChange(product.name);
+                    setIsOpen(false);
+                    setSearchTerm('');
+                  }}
+                >
+                  <div>
+                    <div className="font-medium">{product.name}</div>
+                    <div className="text-sm text-gray-500">
+                      ID: {product.id} | Category: {product.category} | Stock: {product.currentStock}
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {product.location}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="px-3 py-2 text-gray-500">No products found</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AddPurchaseForm() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [inventoryProducts, setInventoryProducts] = useState<InventoryProduct[]>([]);
   const [purchaseItems, setPurchaseItems] = useState<PurchaseItem[]>([
     { id: '1', productName: '', quantity: 1, cost: 0 }
   ]);
@@ -30,28 +128,37 @@ export function AddPurchaseForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Fetch products when component mounts
-  useState(() => {
-    const fetchProducts = async () => {
+  // Fetch inventory products when component mounts
+  useEffect(() => {
+    const fetchInventoryProducts = async () => {
       try {
-        const response = await getSheetData('Products');
+        const response = await getSheetData('Inventory');
         if (response && response.data && response.data.values) {
           const rows = response.data.values;
-          const productData = rows.slice(1).map((row: any[], index: number) => ({
+          // Skip header row and map the data to inventory product objects
+          const inventoryData = rows.slice(1).map((row: any[], index: number) => ({
             id: row[0] || `${index + 1}`,
             name: row[1] || 'Unknown Product',
-            currentStock: parseInt(row[5]) || 0,
-            unitCost: parseFloat(row[4]) || 0
+            category: row[2] || 'Uncategorized',
+            currentStock: parseInt(row[3]) || 0,
+            reorderLevel: parseInt(row[4]) || 0,
+            maxStock: parseInt(row[5]) || 0,
+            unit: row[6] || 'Unit',
+            price: parseFloat(row[7]) || 0,
+            location: row[8] || 'Unknown',
+            supplier: row[9] || 'Unknown Supplier',
+            lastUpdated: row[10] || 'Unknown',
+            status: row[11] || 'Unknown'
           }));
-          setProducts(productData);
+          setInventoryProducts(inventoryData);
         }
       } catch (err) {
-        console.error('Failed to fetch products:', err);
+        console.error('Failed to fetch inventory products:', err);
       }
     };
 
-    fetchProducts();
-  });
+    fetchInventoryProducts();
+  }, []);
 
   const addPurchaseItem = () => {
     setPurchaseItems([
@@ -101,7 +208,26 @@ export function AddPurchaseForm() {
       // Reset form
       setPurchaseItems([{ id: '1', productName: '', quantity: 1, cost: 0 }]);
       
-      // In a real app, you might want to refresh the inventory data
+      // Refresh inventory data
+      const response = await getSheetData('Inventory');
+      if (response && response.data && response.data.values) {
+        const rows = response.data.values;
+        const inventoryData = rows.slice(1).map((row: any[], index: number) => ({
+          id: row[0] || `${index + 1}`,
+          name: row[1] || 'Unknown Product',
+          category: row[2] || 'Uncategorized',
+          currentStock: parseInt(row[3]) || 0,
+          reorderLevel: parseInt(row[4]) || 0,
+          maxStock: parseInt(row[5]) || 0,
+          unit: row[6] || 'Unit',
+          price: parseFloat(row[7]) || 0,
+          location: row[8] || 'Unknown',
+          supplier: row[9] || 'Unknown Supplier',
+          lastUpdated: row[10] || 'Unknown',
+          status: row[11] || 'Unknown'
+        }));
+        setInventoryProducts(inventoryData);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to add stock');
       console.error('Failed to add stock:', err);
@@ -124,21 +250,12 @@ export function AddPurchaseForm() {
             <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
               <div className="md:col-span-5">
                 <Label htmlFor={`product-${item.id}`}>Product</Label>
-                <Select 
-                  value={item.productName} 
+                <SearchableProductSelect
+                  products={inventoryProducts}
+                  value={item.productName}
                   onValueChange={(value) => updatePurchaseItem(item.id, 'productName', value)}
-                >
-                  <SelectTrigger id={`product-${item.id}`}>
-                    <SelectValue placeholder="Select product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products.map(product => (
-                      <SelectItem key={product.id} value={product.name}>
-                        {product.name} (Current: {product.currentStock})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder="Select product"
+                />
               </div>
               <div className="md:col-span-2">
                 <Label htmlFor={`quantity-${item.id}`}>Quantity</Label>
