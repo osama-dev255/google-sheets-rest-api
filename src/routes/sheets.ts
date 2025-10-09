@@ -201,7 +201,7 @@ router.post('/inventory/update-quantities', asyncHandler(async (req: Request, re
  * POST /api/v1/sheets/purchases/add-stock
  * Add stock through purchase transactions
  * Body: {
- *   purchases: { productName: string; quantity: number; cost: number }[]
+ *   purchases: { productName: string; quantity: number; cost: number; supplier?: string }[]
  * }
  */
 router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Response) => {
@@ -234,6 +234,7 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
     const inventoryHeaderRow = inventoryRows[0];
     const inventoryProductNameIndex = inventoryHeaderRow.indexOf('PRODUCT');
     const inventoryCurrentStockIndex = inventoryHeaderRow.indexOf('CURRENTSTOCK');
+    const inventorySupplierIndex = inventoryHeaderRow.indexOf('SUPPLIER'); // Add supplier index
     
     if (inventoryProductNameIndex === -1 || inventoryCurrentStockIndex === -1) {
       return sendErrorResponse(res, 'Required columns not found in Inventory sheet', 400);
@@ -243,7 +244,8 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
     const productsHeaderRow = productRows[0];
     const productsProductNameIndex = productsHeaderRow.indexOf('PRODUCT');
     const productsStockIndex = productsHeaderRow.indexOf('STOCK');
-    const productsCostIndex = productsHeaderRow.indexOf('UNIT COST'); // Add cost index
+    const productsCostIndex = productsHeaderRow.indexOf('UNIT COST');
+    const productsSupplierIndex = productsHeaderRow.indexOf('SUPPLIER'); // Add supplier index
     
     if (productsProductNameIndex === -1 || productsStockIndex === -1 || productsCostIndex === -1) {
       return sendErrorResponse(res, 'Required columns not found in Products sheet', 400);
@@ -271,7 +273,7 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
     const productsSheetUpdates = [];
     
     for (const purchase of purchases) {
-      // Update Inventory sheet (increase stock only)
+      // Update Inventory sheet (increase stock and update supplier if provided)
       const inventoryProductInfo = inventoryProductMap.get(purchase.productName);
       if (inventoryProductInfo) {
         const currentStock = parseInt(inventoryProductInfo.rowData[inventoryCurrentStockIndex]) || 0;
@@ -281,9 +283,17 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
           range: `Inventory!${String.fromCharCode(65 + inventoryCurrentStockIndex)}${inventoryProductInfo.rowIndex + 1}`,
           values: [[newStock.toString()]]
         });
+        
+        // Update supplier in inventory sheet if provided
+        if (purchase.supplier && inventorySupplierIndex !== -1) {
+          inventorySheetUpdates.push({
+            range: `Inventory!${String.fromCharCode(65 + inventorySupplierIndex)}${inventoryProductInfo.rowIndex + 1}`,
+            values: [[purchase.supplier]]
+          });
+        }
       }
       
-      // Update Products sheet (increase stock and update unit cost)
+      // Update Products sheet (increase stock, update unit cost, and update supplier if provided)
       const productsProductInfo = productsProductMap.get(purchase.productName);
       if (productsProductInfo) {
         const currentStock = parseInt(productsProductInfo.rowData[productsStockIndex]) || 0;
@@ -299,6 +309,14 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
           range: `Products!${String.fromCharCode(65 + productsCostIndex)}${productsProductInfo.rowIndex + 1}`,
           values: [[purchase.cost.toString()]]
         });
+        
+        // Update supplier in products sheet if provided
+        if (purchase.supplier && productsSupplierIndex !== -1) {
+          productsSheetUpdates.push({
+            range: `Products!${String.fromCharCode(65 + productsSupplierIndex)}${productsProductInfo.rowIndex + 1}`,
+            values: [[purchase.supplier]]
+          });
+        }
       }
     }
     
