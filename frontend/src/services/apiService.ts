@@ -114,7 +114,7 @@ export const updateInventoryQuantities = async (updates: { productName: string; 
 };
 
 // Add stock through purchase transactions
-export const addStockThroughPurchases = async (purchases: { productName: string; quantity: number; cost: number }[]) => {
+export const addStockThroughPurchases = async (purchases: { productName: string; quantity: number; cost: number; supplier?: string }[]) => {
   try {
     const response = await apiClient.post(`${API_ENDPOINTS.SHEETS}/purchases/add-stock`, { purchases });
     return response;
