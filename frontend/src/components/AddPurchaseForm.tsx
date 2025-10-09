@@ -200,17 +200,26 @@ export function AddPurchaseForm() {
     setSuccess(false);
     
     try {
-      // Validate inputs
-      const validItems = purchaseItems.filter(item => 
-        item.productName && item.quantity > 0 && item.cost >= 0
+      // Check for any items with missing fields and provide specific error
+      const invalidItems = purchaseItems.filter(item => 
+        !item.productName || item.quantity <= 0 || item.cost < 0 || !item.supplier
       );
       
-      if (validItems.length === 0) {
-        throw new Error('Please add at least one valid purchase item');
+      if (invalidItems.length > 0) {
+        const missingFields: string[] = [];
+        invalidItems.forEach(item => {
+          const missing: string[] = [];
+          if (!item.productName) missing.push('product');
+          if (item.quantity <= 0) missing.push('quantity');
+          if (item.cost < 0) missing.push('cost');
+          if (!item.supplier) missing.push('supplier');
+          missingFields.push(`Item "${item.productName || 'unnamed'}": missing ${missing.join(', ')}`);
+        });
+        throw new Error(`Please fill all required fields: ${missingFields.join('; ')}`);
       }
       
-      // Prepare purchase data
-      const purchases = validItems.map(item => ({
+      // Prepare purchase data (all items are valid at this point)
+      const purchases = purchaseItems.map(item => ({
         productName: item.productName,
         quantity: item.quantity,
         cost: item.cost,
