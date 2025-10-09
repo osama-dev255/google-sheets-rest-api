@@ -26,6 +26,7 @@ interface PurchaseItem {
   productName: string;
   quantity: number;
   cost: number;
+  supplier: string; // Add supplier field
 }
 
 // Custom searchable dropdown component with Radix UI theme
@@ -136,7 +137,7 @@ function SearchableProductSelect({
 export function AddPurchaseForm() {
   const [inventoryProducts, setInventoryProducts] = useState<InventoryProduct[]>([]);
   const [purchaseItems, setPurchaseItems] = useState<PurchaseItem[]>([
-    { id: '1', productName: '', quantity: 1, cost: 0 }
+    { id: '1', productName: '', quantity: 1, cost: 0, supplier: '' }
   ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -177,7 +178,7 @@ export function AddPurchaseForm() {
   const addPurchaseItem = () => {
     setPurchaseItems([
       ...purchaseItems,
-      { id: Date.now().toString(), productName: '', quantity: 1, cost: 0 }
+      { id: Date.now().toString(), productName: '', quantity: 1, cost: 0, supplier: '' }
     ]);
   };
 
@@ -220,7 +221,7 @@ export function AddPurchaseForm() {
       
       setSuccess(true);
       // Reset form
-      setPurchaseItems([{ id: '1', productName: '', quantity: 1, cost: 0 }]);
+      setPurchaseItems([{ id: '1', productName: '', quantity: 1, cost: 0, supplier: '' }]);
       
       // Refresh inventory data
       const response = await getSheetData('Inventory');
@@ -262,7 +263,7 @@ export function AddPurchaseForm() {
         <div className="space-y-4">
           {purchaseItems.map((item) => (
             <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-              <div className="md:col-span-5">
+              <div className="md:col-span-4">
                 <Label htmlFor={`product-${item.id}`}>Product</Label>
                 <SearchableProductSelect
                   products={inventoryProducts}
@@ -281,7 +282,7 @@ export function AddPurchaseForm() {
                   onChange={(e) => updatePurchaseItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
                 />
               </div>
-              <div className="md:col-span-3">
+              <div className="md:col-span-2">
                 <Label htmlFor={`cost-${item.id}`}>Unit Cost</Label>
                 <Input
                   id={`cost-${item.id}`}
@@ -290,6 +291,15 @@ export function AddPurchaseForm() {
                   step="0.01"
                   value={item.cost}
                   onChange={(e) => updatePurchaseItem(item.id, 'cost', parseFloat(e.target.value) || 0)}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label htmlFor={`supplier-${item.id}`}>Supplier</Label>
+                <Input
+                  id={`supplier-${item.id}`}
+                  value={item.supplier}
+                  onChange={(e) => updatePurchaseItem(item.id, 'supplier', e.target.value)}
+                  placeholder="Enter supplier name"
                 />
               </div>
               <div className="md:col-span-2">
