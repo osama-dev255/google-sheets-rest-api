@@ -24,7 +24,7 @@ interface InventoryProduct {
 interface PurchaseItem {
   id: string;
   productName: string;
-  quantity: number;
+  quantity: number | null; // Allow null for validation purposes
   cost: number | null; // Allow null for validation purposes
   supplier: string; // Add supplier field
 }
@@ -137,7 +137,7 @@ function SearchableProductSelect({
 export function AddPurchaseForm() {
   const [inventoryProducts, setInventoryProducts] = useState<InventoryProduct[]>([]);
   const [purchaseItems, setPurchaseItems] = useState<PurchaseItem[]>([
-    { id: '1', productName: '', quantity: 1, cost: null, supplier: '' }
+    { id: '1', productName: '', quantity: null, cost: null, supplier: '' }
   ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -178,7 +178,7 @@ export function AddPurchaseForm() {
   const addPurchaseItem = () => {
     setPurchaseItems([
       ...purchaseItems,
-      { id: Date.now().toString(), productName: '', quantity: 1, cost: null, supplier: '' }
+      { id: Date.now().toString(), productName: '', quantity: null, cost: null, supplier: '' }
     ]);
   };
 
@@ -203,6 +203,9 @@ export function AddPurchaseForm() {
       // Check for any items with missing fields and provide specific error
       const invalidItems = purchaseItems.filter(item => 
         !item.productName || 
+        item.quantity === null || 
+        item.quantity === undefined || 
+        isNaN(item.quantity) || 
         item.quantity <= 0 || 
         !item.supplier || 
         item.cost === null || 
@@ -216,7 +219,13 @@ export function AddPurchaseForm() {
         invalidItems.forEach(item => {
           const missing: string[] = [];
           if (!item.productName) missing.push('product');
-          if (item.quantity <= 0) missing.push('quantity');
+          if (item.quantity === null || item.quantity === undefined) {
+            missing.push('quantity (required)');
+          } else if (isNaN(item.quantity)) {
+            missing.push('quantity (invalid number)');
+          } else if (item.quantity <= 0) {
+            missing.push('quantity (must be positive)');
+          }
           if (item.cost === null || item.cost === undefined) {
             missing.push('cost (required)');
           } else if (isNaN(item.cost)) {
@@ -233,8 +242,8 @@ export function AddPurchaseForm() {
       // Prepare purchase data (all items are valid at this point)
       const purchases = purchaseItems.map(item => ({
         productName: item.productName,
-        quantity: item.quantity,
-        cost: item.cost as number, // Type assertion since we've validated it's a valid number
+        quantity: item.quantity!, // We've already validated it's not null
+        cost: item.cost!, // We've already validated it's not null
         supplier: item.supplier // Include supplier field
       }));
       
@@ -243,7 +252,7 @@ export function AddPurchaseForm() {
       
       setSuccess(true);
       // Reset form
-      setPurchaseItems([{ id: '1', productName: '', quantity: 1, cost: null, supplier: '' }]);
+      setPurchaseItems([{ id: '1', productName: '', quantity: null, cost: null, supplier: '' }]);
       
       // Refresh inventory data
       const response = await getSheetData('Inventory');
@@ -300,8 +309,13 @@ export function AddPurchaseForm() {
                   id={`quantity-${item.id}`}
                   type="number"
                   min="1"
-                  value={item.quantity}
-                  onChange={(e) => updatePurchaseItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                  value={item.quantity === null ? '' : item.quantity}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Preserve empty string as null to properly validate required field
+                    const quantityValue = value === '' ? null : parseInt(value);
+                    updatePurchaseItem(item.id, 'quantity', quantityValue);
+                  }}
                 />
               </div>
               <div className="md:col-span-2">
