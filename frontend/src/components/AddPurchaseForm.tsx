@@ -25,7 +25,7 @@ interface PurchaseItem {
   id: string;
   productName: string;
   quantity: number;
-  cost: number;
+  cost: number | null; // Allow null for validation purposes
   supplier: string; // Add supplier field
 }
 
@@ -137,7 +137,7 @@ function SearchableProductSelect({
 export function AddPurchaseForm() {
   const [inventoryProducts, setInventoryProducts] = useState<InventoryProduct[]>([]);
   const [purchaseItems, setPurchaseItems] = useState<PurchaseItem[]>([
-    { id: '1', productName: '', quantity: 1, cost: 0, supplier: '' }
+    { id: '1', productName: '', quantity: 1, cost: null, supplier: '' }
   ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -178,7 +178,7 @@ export function AddPurchaseForm() {
   const addPurchaseItem = () => {
     setPurchaseItems([
       ...purchaseItems,
-      { id: Date.now().toString(), productName: '', quantity: 1, cost: 0, supplier: '' }
+      { id: Date.now().toString(), productName: '', quantity: 1, cost: null, supplier: '' }
     ]);
   };
 
@@ -188,7 +188,7 @@ export function AddPurchaseForm() {
     }
   };
 
-  const updatePurchaseItem = (id: string, field: keyof PurchaseItem, value: string | number) => {
+  const updatePurchaseItem = (id: string, field: keyof PurchaseItem, value: string | number | null) => {
     setPurchaseItems(purchaseItems.map(item => 
       item.id === id ? { ...item, [field]: value } : item
     ));
@@ -202,8 +202,13 @@ export function AddPurchaseForm() {
     try {
       // Check for any items with missing fields and provide specific error
       const invalidItems = purchaseItems.filter(item => 
-        !item.productName || item.quantity <= 0 || !item.supplier || 
-        item.cost === null || item.cost === undefined || isNaN(item.cost) || item.cost < 0
+        !item.productName || 
+        item.quantity <= 0 || 
+        !item.supplier || 
+        item.cost === null || 
+        item.cost === undefined || 
+        isNaN(item.cost) || 
+        item.cost < 0
       );
       
       if (invalidItems.length > 0) {
@@ -212,8 +217,10 @@ export function AddPurchaseForm() {
           const missing: string[] = [];
           if (!item.productName) missing.push('product');
           if (item.quantity <= 0) missing.push('quantity');
-          if (item.cost === null || item.cost === undefined || isNaN(item.cost)) {
+          if (item.cost === null || item.cost === undefined) {
             missing.push('cost (required)');
+          } else if (isNaN(item.cost)) {
+            missing.push('cost (invalid number)');
           } else if (item.cost < 0) {
             missing.push('cost (must be positive)');
           }
@@ -227,7 +234,7 @@ export function AddPurchaseForm() {
       const purchases = purchaseItems.map(item => ({
         productName: item.productName,
         quantity: item.quantity,
-        cost: item.cost,
+        cost: item.cost as number, // Type assertion since we've validated it's a valid number
         supplier: item.supplier // Include supplier field
       }));
       
@@ -236,7 +243,7 @@ export function AddPurchaseForm() {
       
       setSuccess(true);
       // Reset form
-      setPurchaseItems([{ id: '1', productName: '', quantity: 1, cost: 0, supplier: '' }]);
+      setPurchaseItems([{ id: '1', productName: '', quantity: 1, cost: null, supplier: '' }]);
       
       // Refresh inventory data
       const response = await getSheetData('Inventory');
@@ -304,8 +311,13 @@ export function AddPurchaseForm() {
                   type="number"
                   min="0"
                   step="0.01"
-                  value={item.cost}
-                  onChange={(e) => updatePurchaseItem(item.id, 'cost', parseFloat(e.target.value) || 0)}
+                  value={item.cost === null ? '' : item.cost}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Preserve empty string as null to properly validate required field
+                    const costValue = value === '' ? null : parseFloat(value);
+                    updatePurchaseItem(item.id, 'cost', costValue);
+                  }}
                 />
               </div>
               <div className="md:col-span-2">
