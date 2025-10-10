@@ -230,11 +230,17 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
       return sendErrorResponse(res, 'Products sheet is empty', 400);
     }
     
+    // Get Purchases sheet data to understand its structure
+    const purchasesData = await googleSheetsService.getSheetData('Purchases');
+    const purchasesRows = purchasesData.values || [];
+    
     // Process inventory sheet updates
     const inventoryHeaderRow = inventoryRows[0];
     const inventoryProductNameIndex = inventoryHeaderRow.indexOf('PRODUCT');
     const inventoryCurrentStockIndex = inventoryHeaderRow.indexOf('CURRENTSTOCK');
     const inventorySupplierIndex = inventoryHeaderRow.indexOf('SUPPLIER'); // Add supplier index
+    const inventoryCategoryIndex = inventoryHeaderRow.indexOf('CATEGORY');
+    const inventoryLocationIndex = inventoryHeaderRow.indexOf('LOCATION');
     
     if (inventoryProductNameIndex === -1 || inventoryCurrentStockIndex === -1) {
       return sendErrorResponse(res, 'Required columns not found in Inventory sheet', 400);
@@ -246,10 +252,27 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
     const productsStockIndex = productsHeaderRow.indexOf('STOCK');
     const productsCostIndex = productsHeaderRow.indexOf('UNIT COST');
     const productsSupplierIndex = productsHeaderRow.indexOf('SUPPLIER'); // Add supplier index
+    const productsCategoryIndex = productsHeaderRow.indexOf('CATEGORY');
     
     if (productsProductNameIndex === -1 || productsStockIndex === -1 || productsCostIndex === -1) {
       return sendErrorResponse(res, 'Required columns not found in Products sheet', 400);
     }
+    
+    // Process purchases sheet structure
+    const purchasesHeaderRow = purchasesRows[0] || [];
+    const purchasesIdIndex = purchasesHeaderRow.indexOf('ID');
+    const purchasesReceiptNoIndex = purchasesHeaderRow.indexOf('RECEIPT NO.');
+    const purchasesDateIndex = purchasesHeaderRow.indexOf('DATE');
+    const purchasesTimeIndex = purchasesHeaderRow.indexOf('TIME');
+    const purchasesProductIndex = purchasesHeaderRow.indexOf('PRODUCT');
+    const purchasesCategoryIndex = purchasesHeaderRow.indexOf('CATEGORY');
+    const purchasesQuantityIndex = purchasesHeaderRow.indexOf('QUANTITY');
+    const purchasesCostIndex = purchasesHeaderRow.indexOf('COST');
+    const purchasesAmountIndex = purchasesHeaderRow.indexOf('AMOUNT');
+    const purchasesLocationIndex = purchasesHeaderRow.indexOf('LOCATION');
+    const purchasesSupplierIndex = purchasesHeaderRow.indexOf('SUPPLIER');
+    const purchasesStatusIndex = purchasesHeaderRow.indexOf('STATUS');
+    const purchasesPurchasedByIndex = purchasesHeaderRow.indexOf('PURCHASED BY');
     
     // Create maps for quick lookup
     const inventoryProductMap = new Map();
@@ -271,6 +294,15 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
     // Prepare updates for Google Sheets
     const inventorySheetUpdates = [];
     const productsSheetUpdates = [];
+    const purchasesSheetUpdates = [];
+    
+    // Generate a unique ID for the purchase record
+    const purchaseId = `P${Date.now()}`;
+    const receiptNo = `R${Math.floor(100000 + Math.random() * 900000)}`;
+    const currentDate = new Date().toISOString().split('T')[0];
+    const currentTime = new Date().toISOString().split('T')[1].split('.')[0];
+    const purchasedBy = 'System'; // Could be made dynamic in the future
+    const status = 'Completed';
     
     for (const purchase of purchases) {
       // Update Inventory sheet (increase stock and update supplier if provided)
@@ -278,6 +310,9 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
       if (inventoryProductInfo) {
         const currentStock = parseInt(inventoryProductInfo.rowData[inventoryCurrentStockIndex]) || 0;
         const newStock = currentStock + purchase.quantity;
+        const category = inventoryProductInfo.rowData[inventoryCategoryIndex] || 'Unknown';
+        const location = inventoryProductInfo.rowData[inventoryLocationIndex] || 'Unknown';
+        const supplier = purchase.supplier || inventoryProductInfo.rowData[inventorySupplierIndex] || 'Unknown';
         
         inventorySheetUpdates.push({
           range: `Inventory!${String.fromCharCode(65 + inventoryCurrentStockIndex)}${inventoryProductInfo.rowIndex + 1}`,
@@ -291,6 +326,39 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
             values: [[purchase.supplier]]
           });
         }
+        
+        // Add purchase record to Purchases sheet
+        if (purchasesProductIndex !== -1) {
+          const amount = purchase.quantity * purchase.cost;
+          const purchaseRowData = [];
+          
+          // Fill the purchase row with data based on column indices
+          if (purchasesIdIndex !== -1) purchaseRowData[purchasesIdIndex] = purchaseId;
+          if (purchasesReceiptNoIndex !== -1) purchaseRowData[purchasesReceiptNoIndex] = receiptNo;
+          if (purchasesDateIndex !== -1) purchaseRowData[purchasesDateIndex] = currentDate;
+          if (purchasesTimeIndex !== -1) purchaseRowData[purchasesTimeIndex] = currentTime;
+          if (purchasesProductIndex !== -1) purchaseRowData[purchasesProductIndex] = purchase.productName;
+          if (purchasesCategoryIndex !== -1) purchaseRowData[purchasesCategoryIndex] = category;
+          if (purchasesQuantityIndex !== -1) purchaseRowData[purchasesQuantityIndex] = purchase.quantity.toString();
+          if (purchasesCostIndex !== -1) purchaseRowData[purchasesCostIndex] = purchase.cost.toString();
+          if (purchasesAmountIndex !== -1) purchaseRowData[purchasesAmountIndex] = amount.toString();
+          if (purchasesLocationIndex !== -1) purchaseRowData[purchasesLocationIndex] = location;
+          if (purchasesSupplierIndex !== -1) purchaseRowData[purchasesSupplierIndex] = supplier;
+          if (purchasesStatusIndex !== -1) purchaseRowData[purchasesStatusIndex] = status;
+          if (purchasesPurchasedByIndex !== -1) purchaseRowData[purchasesPurchasedByIndex] = purchasedBy;
+          
+          // Fill any undefined values with empty strings
+          for (let i = 0; i < purchaseRowData.length; i++) {
+            if (purchaseRowData[i] === undefined) {
+              purchaseRowData[i] = '';
+            }
+          }
+          
+          purchasesSheetUpdates.push({
+            range: `Purchases!A${purchasesRows.length + 1}:${String.fromCharCode(65 + purchaseRowData.length - 1)}${purchasesRows.length + 1}`,
+            values: [purchaseRowData]
+          });
+        }
       }
       
       // Update Products sheet (increase stock, update unit cost, and update supplier if provided)
@@ -298,6 +366,8 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
       if (productsProductInfo) {
         const currentStock = parseInt(productsProductInfo.rowData[productsStockIndex]) || 0;
         const newStock = currentStock + purchase.quantity;
+        const category = productsProductInfo.rowData[productsCategoryIndex] || 'Unknown';
+        const supplier = purchase.supplier || productsProductInfo.rowData[productsSupplierIndex] || 'Unknown';
         
         productsSheetUpdates.push({
           range: `Products!${String.fromCharCode(65 + productsStockIndex)}${productsProductInfo.rowIndex + 1}`,
@@ -317,11 +387,45 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
             values: [[purchase.supplier]]
           });
         }
+        
+        // Add purchase record to Purchases sheet (if not already added from inventory)
+        if (purchasesProductIndex !== -1 && inventoryProductInfo === undefined) {
+          const amount = purchase.quantity * purchase.cost;
+          const location = 'Unknown'; // Products sheet doesn't have location
+          const purchaseRowData = [];
+          
+          // Fill the purchase row with data based on column indices
+          if (purchasesIdIndex !== -1) purchaseRowData[purchasesIdIndex] = purchaseId;
+          if (purchasesReceiptNoIndex !== -1) purchaseRowData[purchasesReceiptNoIndex] = receiptNo;
+          if (purchasesDateIndex !== -1) purchaseRowData[purchasesDateIndex] = currentDate;
+          if (purchasesTimeIndex !== -1) purchaseRowData[purchasesTimeIndex] = currentTime;
+          if (purchasesProductIndex !== -1) purchaseRowData[purchasesProductIndex] = purchase.productName;
+          if (purchasesCategoryIndex !== -1) purchaseRowData[purchasesCategoryIndex] = category;
+          if (purchasesQuantityIndex !== -1) purchaseRowData[purchasesQuantityIndex] = purchase.quantity.toString();
+          if (purchasesCostIndex !== -1) purchaseRowData[purchasesCostIndex] = purchase.cost.toString();
+          if (purchasesAmountIndex !== -1) purchaseRowData[purchasesAmountIndex] = amount.toString();
+          if (purchasesLocationIndex !== -1) purchaseRowData[purchasesLocationIndex] = location;
+          if (purchasesSupplierIndex !== -1) purchaseRowData[purchasesSupplierIndex] = supplier;
+          if (purchasesStatusIndex !== -1) purchaseRowData[purchasesStatusIndex] = status;
+          if (purchasesPurchasedByIndex !== -1) purchaseRowData[purchasesPurchasedByIndex] = purchasedBy;
+          
+          // Fill any undefined values with empty strings
+          for (let i = 0; i < purchaseRowData.length; i++) {
+            if (purchaseRowData[i] === undefined) {
+              purchaseRowData[i] = '';
+            }
+          }
+          
+          purchasesSheetUpdates.push({
+            range: `Purchases!A${purchasesRows.length + 1}:${String.fromCharCode(65 + purchaseRowData.length - 1)}${purchasesRows.length + 1}`,
+            values: [purchaseRowData]
+          });
+        }
       }
     }
     
     // Apply all updates to Google Sheets
-    const allUpdates = [...inventorySheetUpdates, ...productsSheetUpdates];
+    const allUpdates = [...inventorySheetUpdates, ...productsSheetUpdates, ...purchasesSheetUpdates];
     for (const update of allUpdates) {
       // Determine which sheet to update based on the range
       const sheetName = update.range.split('!')[0];
@@ -338,8 +442,9 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
     sendSuccessResponse(res, { 
       updatedItems: allUpdates.length,
       inventoryUpdates: inventorySheetUpdates.length,
-      productsUpdates: productsSheetUpdates.length
-    }, 'Stock added successfully through purchases');
+      productsUpdates: productsSheetUpdates.length,
+      purchasesUpdates: purchasesSheetUpdates.length
+    }, 'Stock added successfully through purchases and recorded in Purchases sheet');
   } catch (error) {
     const { message, statusCode } = handleError(error, req);
     sendErrorResponse(res, message, statusCode);
