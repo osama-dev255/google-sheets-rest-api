@@ -36,43 +36,43 @@ export function Purchases() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchPurchases = async () => {
-      try {
-        setLoading(true);
-        // Fetch purchases data from the Purchases sheet
-        const response = await getSheetData('Purchases');
+  const fetchPurchases = async () => {
+    try {
+      setLoading(true);
+      // Fetch purchases data from the Purchases sheet
+      const response = await getSheetData('Purchases');
+      
+      if (response && response.data && response.data.values) {
+        const rows = response.data.values;
         
-        if (response && response.data && response.data.values) {
-          const rows = response.data.values;
-          
-          // Skip header row and map the data to purchase objects
-          const purchaseData = rows.slice(1, 51).map((row: any[], index: number) => ({
-            id: row[0] || `${index + 1}`, // ID
-            receiptNo: row[1] || 'N/A', // Receipt Number
-            date: row[2] || 'Unknown Date', // Date (TAREHE)
-            time: row[3] || 'Unknown Time', // Time (MUDA)
-            category: row[4] || 'Uncategorized', // Category (KUNDI)
-            product: row[5] || 'Unknown Product', // Product (BIDHAA)
-            price: parseFloat(row[6]?.replace('TSh', '').replace(/,/g, '')) || 0, // Price (BEI1)
-            quantity: parseInt(row[7]) || 0, // Quantity (IDADI)
-            amount: parseFloat(row[8]?.replace('TSh', '').replace(/,/g, '')) || 0, // Amount (KIASI)
-            status: 'completed' // Default status
-          }));
-          
-          setPurchases(purchaseData);
-        }
+        // Skip header row and map the data to purchase objects
+        const purchaseData = rows.slice(1, 51).map((row: any[], index: number) => ({
+          id: row[0] || `${index + 1}`, // ID
+          receiptNo: row[1] || 'N/A', // Receipt Number
+          date: row[2] || 'Unknown Date', // Date (TAREHE)
+          time: row[3] || 'Unknown Time', // Time (MUDA)
+          product: row[4] || 'Unknown Product', // Product (BIDHAA) - Fixed mapping
+          category: row[5] || 'Uncategorized', // Category (KUNDI) - Fixed mapping
+          quantity: parseInt(row[6]) || 0, // Quantity (IDADI)
+          price: parseFloat(row[7]?.replace('TSh', '').replace(/,/g, '')) || 0, // Cost (BEI1)
+          amount: parseFloat(row[8]?.replace('TSh', '').replace(/,/g, '')) || 0, // Amount (KIASI)
+          status: 'completed' // Default status
+        }));
         
-        setError(null);
-      } catch (err: unknown) {
-        const error = err as Error;
-        setError('Failed to fetch purchases: ' + (error.message || 'Unknown error'));
-        console.error('Purchases fetch error:', error);
-      } finally {
-        setLoading(false);
+        setPurchases(purchaseData);
       }
-    };
+      
+      setError(null);
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError('Failed to fetch purchases: ' + (error.message || 'Unknown error'));
+      console.error('Purchases fetch error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchPurchases();
   }, []);
 
@@ -166,7 +166,7 @@ export function Purchases() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <AddPurchaseForm />
+              <AddPurchaseForm onPurchaseAdded={fetchPurchases} />
             </div>
           </div>
         </CardHeader>

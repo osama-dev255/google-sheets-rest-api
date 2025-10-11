@@ -60,7 +60,6 @@ export function Inventory() {
                 unit: 'Pack',
                 lastUpdated: '2024-12-01',
                 status: 'active',
-                cost: 8200,
                 price: 9700
               }
             ];
@@ -75,12 +74,11 @@ export function Inventory() {
               minStock: parseInt(row[4]) || 0, // Minimum Stock Level (RE-ORDER LEVEL)
               maxStock: parseInt(row[5]) || 0, // Maximum Stock Level
               unit: row[6] || 'Unit', // Unit of Measurement
-              price: parseFloat(row[7]) || 0, // Price (was lastUpdated)
-              location: row[8] || 'Unknown', // Location (was cost)
-              supplier: row[9] || 'Unknown Supplier', // Supplier (was price)
+              price: parseFloat(row[7]) || 0, // Price
+              location: row[8] || 'Unknown', // Location
+              supplier: row[9] || 'Unknown Supplier', // Supplier
               lastUpdated: row[10] || 'Unknown', // Last Updated
-              status: row[11] || 'active', // Status
-              cost: parseFloat(row[7]) * 0.9 || 0 // Calculate cost as 90% of price (approximation)
+              status: row[11] || 'active' // Status
             }));
             
             setInventoryItems(inventoryData);
@@ -98,7 +96,6 @@ export function Inventory() {
               unit: 'Pack',
               lastUpdated: '2024-12-01',
               status: 'active',
-              cost: 8200,
               price: 9700
             },
             {
@@ -111,7 +108,6 @@ export function Inventory() {
               unit: 'Pack',
               lastUpdated: '2024-12-01',
               status: 'active',
-              cost: 8200,
               price: 9700
             },
             {
@@ -124,7 +120,6 @@ export function Inventory() {
               unit: 'Pack',
               lastUpdated: '2024-12-01',
               status: 'active',
-              cost: 11000,
               price: 12800
             },
             {
@@ -137,7 +132,6 @@ export function Inventory() {
               unit: 'Pack',
               lastUpdated: '2024-12-01',
               status: 'low',
-              cost: 11000,
               price: 12800
             }
           ];
@@ -298,7 +292,6 @@ export function Inventory() {
                 <TableHead>Min/Max</TableHead>
                 <TableHead>Unit</TableHead>
                 <TableHead>Price</TableHead>
-                <TableHead>Cost</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Supplier</TableHead>
                 <TableHead>Last Updated</TableHead>
@@ -319,7 +312,6 @@ export function Inventory() {
                   <TableCell>{item.minStock} / {item.maxStock}</TableCell>
                   <TableCell>{item.unit}</TableCell>
                   <TableCell>{formatCurrency(item.price)}</TableCell>
-                  <TableCell>{formatCurrency(item.cost)}</TableCell>
                   <TableCell>{item.location}</TableCell>
                   <TableCell>{item.supplier}</TableCell>
                   <TableCell>{item.lastUpdated}</TableCell>

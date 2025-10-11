@@ -299,8 +299,10 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
     // Generate a unique ID for the purchase record
     const purchaseId = `P${Date.now()}`;
     const receiptNo = `R${Math.floor(100000 + Math.random() * 900000)}`;
-    const currentDate = new Date().toISOString().split('T')[0];
-    const currentTime = new Date().toISOString().split('T')[1].split('.')[0];
+    // Use local timezone instead of UTC for timestamps
+    const now = new Date();
+    const currentDate = now.toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }); // YYYY-MM-DD format
+    const currentTime = now.toLocaleTimeString('en-US', { timeZone: 'Africa/Nairobi', hour12: false }); // HH:MM:SS format
     const purchasedBy = 'System'; // Could be made dynamic in the future
     const status = 'Completed';
     

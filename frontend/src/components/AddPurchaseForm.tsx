@@ -134,7 +134,7 @@ function SearchableProductSelect({
   );
 }
 
-export function AddPurchaseForm() {
+export function AddPurchaseForm({ onPurchaseAdded }: { onPurchaseAdded?: () => void }) {
   const [inventoryProducts, setInventoryProducts] = useState<InventoryProduct[]>([]);
   const [purchaseItems, setPurchaseItems] = useState<PurchaseItem[]>([
     { id: '1', productName: '', quantity: null, cost: null, supplier: '' }
@@ -253,6 +253,11 @@ export function AddPurchaseForm() {
       setSuccess(true);
       // Reset form
       setPurchaseItems([{ id: '1', productName: '', quantity: null, cost: null, supplier: '' }]);
+      
+      // Call the callback function to refresh purchases data
+      if (onPurchaseAdded) {
+        onPurchaseAdded();
+      }
       
       // Refresh inventory data
       const response = await getSheetData('Inventory');
