@@ -27,6 +27,8 @@ interface PurchaseItem {
   quantity: number | null; // Allow null for validation purposes
   cost: number | null; // Allow null for validation purposes
   supplier: string; // Add supplier field
+  location: string; // Add location field
+  purchasedBy: string; // Add purchased by field
 }
 
 // Custom searchable dropdown component with Radix UI theme
@@ -137,7 +139,7 @@ function SearchableProductSelect({
 export function AddPurchaseForm({ onPurchaseAdded }: { onPurchaseAdded?: () => void }) {
   const [inventoryProducts, setInventoryProducts] = useState<InventoryProduct[]>([]);
   const [purchaseItems, setPurchaseItems] = useState<PurchaseItem[]>([
-    { id: '1', productName: '', quantity: null, cost: null, supplier: '' }
+    { id: '1', productName: '', quantity: null, cost: null, supplier: '', location: '', purchasedBy: '' }
   ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -178,7 +180,7 @@ export function AddPurchaseForm({ onPurchaseAdded }: { onPurchaseAdded?: () => v
   const addPurchaseItem = () => {
     setPurchaseItems([
       ...purchaseItems,
-      { id: Date.now().toString(), productName: '', quantity: null, cost: null, supplier: '' }
+      { id: Date.now().toString(), productName: '', quantity: null, cost: null, supplier: '', location: '', purchasedBy: '' }
     ]);
   };
 
@@ -244,7 +246,9 @@ export function AddPurchaseForm({ onPurchaseAdded }: { onPurchaseAdded?: () => v
         productName: item.productName,
         quantity: item.quantity!, // We've already validated it's not null
         cost: item.cost!, // We've already validated it's not null
-        supplier: item.supplier // Include supplier field
+        supplier: item.supplier, // Include supplier field
+        location: item.location, // Include location field
+        purchasedBy: item.purchasedBy // Include purchased by field
       }));
       
       // Add stock through purchases
@@ -252,7 +256,7 @@ export function AddPurchaseForm({ onPurchaseAdded }: { onPurchaseAdded?: () => v
       
       setSuccess(true);
       // Reset form
-      setPurchaseItems([{ id: '1', productName: '', quantity: null, cost: null, supplier: '' }]);
+      setPurchaseItems([{ id: '1', productName: '', quantity: null, cost: null, supplier: '', location: '', purchasedBy: '' }]);
       
       // Call the callback function to refresh purchases data
       if (onPurchaseAdded) {
@@ -346,6 +350,24 @@ export function AddPurchaseForm({ onPurchaseAdded }: { onPurchaseAdded?: () => v
                   value={item.supplier}
                   onChange={(e) => updatePurchaseItem(item.id, 'supplier', e.target.value)}
                   placeholder="Enter supplier name"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label htmlFor={`location-${item.id}`}>Location</Label>
+                <Input
+                  id={`location-${item.id}`}
+                  value={item.location}
+                  onChange={(e) => updatePurchaseItem(item.id, 'location', e.target.value)}
+                  placeholder="Enter location"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label htmlFor={`purchasedBy-${item.id}`}>Purchased By</Label>
+                <Input
+                  id={`purchasedBy-${item.id}`}
+                  value={item.purchasedBy}
+                  onChange={(e) => updatePurchaseItem(item.id, 'purchasedBy', e.target.value)}
+                  placeholder="Enter purchaser name"
                 />
               </div>
               <div className="md:col-span-2">

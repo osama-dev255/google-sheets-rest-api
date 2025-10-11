@@ -56,7 +56,10 @@ export function Purchases() {
           quantity: parseInt(row[6]) || 0, // Quantity (IDADI)
           price: parseFloat(row[7]?.replace('TSh', '').replace(/,/g, '')) || 0, // Cost (BEI1)
           amount: parseFloat(row[8]?.replace('TSh', '').replace(/,/g, '')) || 0, // Amount (KIASI)
-          status: 'completed' // Default status
+          location: row[9] || 'Unknown', // Location
+          supplier: row[10] || 'Unknown', // Supplier
+          status: row[11] || 'completed', // Status
+          purchasedBy: row[12] || 'Unknown' // Purchased By
         }));
         
         setPurchases(purchaseData);
@@ -181,6 +184,9 @@ export function Purchases() {
                 <TableHead>Quantity</TableHead>
                 <TableHead>Cost</TableHead>
                 <TableHead>Amount</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Supplier</TableHead>
+                <TableHead>Purchased By</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -204,6 +210,9 @@ export function Purchases() {
                   <TableCell>{purchase.quantity}</TableCell>
                   <TableCell>{formatCurrency(purchase.price)}</TableCell>
                   <TableCell>{formatCurrency(purchase.amount)}</TableCell>
+                  <TableCell>{purchase.location}</TableCell>
+                  <TableCell>{purchase.supplier}</TableCell>
+                  <TableCell>{purchase.purchasedBy}</TableCell>
                   <TableCell>
                     {purchase.status === 'completed' && <Badge variant="default">Completed</Badge>}
                   </TableCell>

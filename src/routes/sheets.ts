@@ -201,7 +201,7 @@ router.post('/inventory/update-quantities', asyncHandler(async (req: Request, re
  * POST /api/v1/sheets/purchases/add-stock
  * Add stock through purchase transactions
  * Body: {
- *   purchases: { productName: string; quantity: number; cost: number; supplier?: string }[]
+ *   purchases: { productName: string; quantity: number; cost: number; supplier?: string; location?: string; purchasedBy?: string }[]
  * }
  */
 router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Response) => {
@@ -313,8 +313,11 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
         const currentStock = parseInt(inventoryProductInfo.rowData[inventoryCurrentStockIndex]) || 0;
         const newStock = currentStock + purchase.quantity;
         const category = inventoryProductInfo.rowData[inventoryCategoryIndex] || 'Unknown';
-        const location = inventoryProductInfo.rowData[inventoryLocationIndex] || 'Unknown';
+        // Use provided location or fallback to inventory location
+        const location = purchase.location || inventoryProductInfo.rowData[inventoryLocationIndex] || 'Unknown';
         const supplier = purchase.supplier || inventoryProductInfo.rowData[inventorySupplierIndex] || 'Unknown';
+        // Use provided purchasedBy or fallback to default
+        const finalPurchasedBy = purchase.purchasedBy || purchasedBy;
         
         inventorySheetUpdates.push({
           range: `Inventory!${String.fromCharCode(65 + inventoryCurrentStockIndex)}${inventoryProductInfo.rowIndex + 1}`,
@@ -347,7 +350,7 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
           if (purchasesLocationIndex !== -1) purchaseRowData[purchasesLocationIndex] = location;
           if (purchasesSupplierIndex !== -1) purchaseRowData[purchasesSupplierIndex] = supplier;
           if (purchasesStatusIndex !== -1) purchaseRowData[purchasesStatusIndex] = status;
-          if (purchasesPurchasedByIndex !== -1) purchaseRowData[purchasesPurchasedByIndex] = purchasedBy;
+          if (purchasesPurchasedByIndex !== -1) purchaseRowData[purchasesPurchasedByIndex] = finalPurchasedBy;
           
           // Fill any undefined values with empty strings
           for (let i = 0; i < purchaseRowData.length; i++) {
@@ -370,6 +373,8 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
         const newStock = currentStock + purchase.quantity;
         const category = productsProductInfo.rowData[productsCategoryIndex] || 'Unknown';
         const supplier = purchase.supplier || productsProductInfo.rowData[productsSupplierIndex] || 'Unknown';
+        // Use provided purchasedBy or fallback to default
+        const finalPurchasedBy = purchase.purchasedBy || purchasedBy;
         
         productsSheetUpdates.push({
           range: `Products!${String.fromCharCode(65 + productsStockIndex)}${productsProductInfo.rowIndex + 1}`,
@@ -393,7 +398,7 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
         // Add purchase record to Purchases sheet (if not already added from inventory)
         if (purchasesProductIndex !== -1 && inventoryProductInfo === undefined) {
           const amount = purchase.quantity * purchase.cost;
-          const location = 'Unknown'; // Products sheet doesn't have location
+          const location = purchase.location || 'Unknown'; // Use provided location or default
           const purchaseRowData = [];
           
           // Fill the purchase row with data based on column indices
@@ -409,7 +414,7 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
           if (purchasesLocationIndex !== -1) purchaseRowData[purchasesLocationIndex] = location;
           if (purchasesSupplierIndex !== -1) purchaseRowData[purchasesSupplierIndex] = supplier;
           if (purchasesStatusIndex !== -1) purchaseRowData[purchasesStatusIndex] = status;
-          if (purchasesPurchasedByIndex !== -1) purchaseRowData[purchasesPurchasedByIndex] = purchasedBy;
+          if (purchasesPurchasedByIndex !== -1) purchaseRowData[purchasesPurchasedByIndex] = finalPurchasedBy;
           
           // Fill any undefined values with empty strings
           for (let i = 0; i < purchaseRowData.length; i++) {
