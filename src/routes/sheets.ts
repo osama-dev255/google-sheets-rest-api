@@ -19,9 +19,12 @@ router.get('/', (req: Request, res: Response) => {
   const routes = {
     'GET /metadata': 'Get spreadsheet metadata',
     'GET /all': 'Get data from all sheets',
+    'GET /export/:format': 'Export all sheets data in specified format (csv, json)',
     'POST /inventory/update-quantities': 'Update inventory quantities based on sales/purchases',
     'POST /purchases/add-stock': 'Add stock through purchase transactions',
+    'POST /sales/record': 'Record a sale transaction',
     'POST /rename': 'Rename a sheet',
+    'DELETE /:sheetName/row/:rowIndex': 'Clear a specific row in a sheet',
     'GET /:sheetName': 'Get data from a specific sheet',
     'GET /:sheetName/range/:range': 'Get data from a specific range',
     'PUT /:sheetName/range/:range': 'Update data in a specific range',
@@ -31,6 +34,57 @@ router.get('/', (req: Request, res: Response) => {
   
   sendSuccessResponse(res, routes, 'Available Google Sheets API routes');
 });
+
+/**
+ * GET /api/v1/sheets/export/:format
+ * Export all sheets data in specified format
+ */
+router.get('/export/:format', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { format } = req.params;
+    const validFormats = ['csv', 'json'];
+    
+    if (!validFormats.includes(format)) {
+      return sendErrorResponse(res, `Invalid format. Supported formats: ${validFormats.join(', ')}`, 400);
+    }
+    
+    logger.debug('Exporting all sheets data', { format });
+    const allData = await googleSheetsService.getAllSheetsData();
+    
+    if (format === 'json') {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', 'attachment; filename="sheets-export.json"');
+      return res.json(allData);
+    } else if (format === 'csv') {
+      // Convert to CSV format
+      let csvContent = '';
+      
+      for (const [sheetName, sheetData] of Object.entries(allData)) {
+        csvContent += `Sheet: ${sheetName}\n`;
+        
+        if (sheetData.values && sheetData.values.length > 0) {
+          // Add header row
+          const headers = sheetData.values[0];
+          csvContent += headers.join(',') + '\n';
+          
+          // Add data rows
+          for (let i = 1; i < sheetData.values.length; i++) {
+            csvContent += sheetData.values[i].join(',') + '\n';
+          }
+        }
+        
+        csvContent += '\n'; // Separator between sheets
+      }
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="sheets-export.csv"');
+      return res.send(csvContent);
+    }
+  } catch (error) {
+    const { message, statusCode } = handleError(error, req);
+    sendErrorResponse(res, message, statusCode);
+  }
+}));
 
 /**
  * GET /api/v1/sheets/metadata
@@ -58,6 +112,63 @@ router.get('/all', asyncHandler(async (req: Request, res: Response) => {
     const allData = await googleSheetsService.getAllSheetsData();
     
     sendSuccessResponse(res, allData, 'All sheets data retrieved successfully');
+  } catch (error) {
+    const { message, statusCode } = handleError(error, req);
+    sendErrorResponse(res, message, statusCode);
+  }
+}));
+
+/**
+ * DELETE /api/v1/sheets/:sheetName/row/:rowIndex
+ * Clear a specific row in a sheet
+ */
+router.delete('/:sheetName/row/:rowIndex', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { sheetName } = req.params;
+    const { rowIndex } = req.params;
+    
+    if (!sheetName) {
+      return sendErrorResponse(res, 'Sheet name is required', 400);
+    }
+    
+    const rowIndexNum = parseInt(rowIndex);
+    if (isNaN(rowIndexNum) || rowIndexNum < 1) {
+      return sendErrorResponse(res, 'Valid row index is required', 400);
+    }
+    
+    logger.debug('Clearing row in sheet', { sheetName, rowIndex: rowIndexNum });
+    
+    // Get sheet data to determine the number of columns
+    const sheetData = await googleSheetsService.getSheetData(sheetName);
+    const rows = sheetData.values || [];
+    
+    if (rows.length === 0) {
+      return sendErrorResponse(res, 'Sheet is empty', 400);
+    }
+    
+    // Check if row index is within bounds
+    if (rowIndexNum > rows.length) {
+      return sendErrorResponse(res, 'Row index out of bounds', 400);
+    }
+    
+    // Get the number of columns from the header row
+    const columnCount = rows[0].length;
+    
+    // Create empty values for the row
+    const emptyRow = Array(columnCount).fill('');
+    
+    // Convert rowIndexNum to 0-based index for Google Sheets
+    // rowIndexNum is 1-based (from frontend), so we subtract 1
+    const range = `${sheetName}!A${rowIndexNum}:${String.fromCharCode(64 + columnCount)}${rowIndexNum}`;
+    
+    await googleSheetsService.updateSheetData(
+      sheetName,
+      range,
+      [emptyRow],
+      'USER_ENTERED'
+    );
+    
+    sendSuccessResponse(res, null, `Row ${rowIndexNum} cleared successfully in sheet "${sheetName}"`);
   } catch (error) {
     const { message, statusCode } = handleError(error, req);
     sendErrorResponse(res, message, statusCode);
@@ -332,6 +443,15 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
           });
         }
         
+        // Update last updated date in inventory sheet
+        const inventoryLastUpdatedIndex = inventoryHeaderRow.indexOf('LASTUPDATED');
+        if (inventoryLastUpdatedIndex !== -1) {
+          inventorySheetUpdates.push({
+            range: `Inventory!${String.fromCharCode(65 + inventoryLastUpdatedIndex)}${inventoryProductInfo.rowIndex + 1}`,
+            values: [[currentDate]]
+          });
+        }
+        
         // Add purchase record to Purchases sheet
         if (purchasesProductIndex !== -1) {
           const amount = purchase.quantity * purchase.cost;
@@ -395,6 +515,15 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
           });
         }
         
+        // Update last updated date in products sheet (if column exists)
+        const productsLastUpdatedIndex = productsHeaderRow.indexOf('LASTUPDATED');
+        if (productsLastUpdatedIndex !== -1) {
+          productsSheetUpdates.push({
+            range: `Products!${String.fromCharCode(65 + productsLastUpdatedIndex)}${productsProductInfo.rowIndex + 1}`,
+            values: [[currentDate]]
+          });
+        }
+        
         // Add purchase record to Purchases sheet (if not already added from inventory)
         if (purchasesProductIndex !== -1 && inventoryProductInfo === undefined) {
           const amount = purchase.quantity * purchase.cost;
@@ -452,6 +581,117 @@ router.post('/purchases/add-stock', asyncHandler(async (req: Request, res: Respo
       productsUpdates: productsSheetUpdates.length,
       purchasesUpdates: purchasesSheetUpdates.length
     }, 'Stock added successfully through purchases and recorded in Purchases sheet');
+  } catch (error) {
+    const { message, statusCode } = handleError(error, req);
+    sendErrorResponse(res, message, statusCode);
+  }
+}));
+
+/**
+ * POST /api/v1/sheets/sales/record
+ * Record a sale transaction
+ * Body: {
+ *   sales: { 
+ *     id: string;
+ *     receiptNo: string;
+ *     date: string;
+ *     time: string;
+ *     category: string;
+ *     product: string;
+ *     price: number;
+ *     discount: number;
+ *     quantity: number;
+ *     totalAmount: number;
+ *     soldBy: string;
+ *     status: string;
+ *     amountReceived: number;
+ *     change: number;
+ *   }[]
+ * }
+ */
+router.post('/sales/record', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { sales } = req.body;
+    
+    if (!sales || !Array.isArray(sales)) {
+      return sendErrorResponse(res, 'Sales array is required', 400);
+    }
+    
+    logger.debug('Recording sales transactions', { salesCount: sales.length });
+    
+    // Get Sales sheet data to understand its structure
+    const salesData = await googleSheetsService.getSheetData('Sales');
+    const salesRows = salesData.values || [];
+    
+    // Process sales sheet structure
+    const salesHeaderRow = salesRows[0] || [];
+    const salesIdIndex = salesHeaderRow.indexOf('ID');
+    const salesReceiptNoIndex = salesHeaderRow.indexOf('RECEIPT NO.');
+    const salesDateIndex = salesHeaderRow.indexOf('DATE');
+    const salesTimeIndex = salesHeaderRow.indexOf('TIME');
+    const salesCategoryIndex = salesHeaderRow.indexOf('CARTEGORY'); // Note the spelling in the sheet
+    const salesProductIndex = salesHeaderRow.indexOf('PRODUCT');
+    const salesPriceIndex = salesHeaderRow.indexOf('PRICE');
+    const salesDiscountIndex = salesHeaderRow.indexOf('Discount');
+    const salesQuantityIndex = salesHeaderRow.indexOf('QUANTITY');
+    const salesTotalAmountIndex = salesHeaderRow.indexOf('TOTAL  AMOUNT'); // Note the double space
+    const salesSoldByIndex = salesHeaderRow.indexOf('SOLD BY');
+    const salesStatusIndex = salesHeaderRow.indexOf('STATUS');
+    const salesAmountReceivedIndex = salesHeaderRow.indexOf('AMOUNT RECEIVED');
+    const salesChangeIndex = salesHeaderRow.indexOf('CHANGE');
+    
+    // Prepare sales sheet updates
+    const salesSheetUpdates = [];
+    
+    for (const sale of sales) {
+      const saleRowData = [];
+      
+      // Fill the sale row with data based on column indices
+      if (salesIdIndex !== -1) saleRowData[salesIdIndex] = sale.id;
+      if (salesReceiptNoIndex !== -1) saleRowData[salesReceiptNoIndex] = sale.receiptNo;
+      if (salesDateIndex !== -1) saleRowData[salesDateIndex] = sale.date;
+      if (salesTimeIndex !== -1) saleRowData[salesTimeIndex] = sale.time;
+      if (salesCategoryIndex !== -1) saleRowData[salesCategoryIndex] = sale.category;
+      if (salesProductIndex !== -1) saleRowData[salesProductIndex] = sale.product;
+      if (salesPriceIndex !== -1) saleRowData[salesPriceIndex] = sale.price.toString();
+      if (salesDiscountIndex !== -1) saleRowData[salesDiscountIndex] = sale.discount.toString();
+      if (salesQuantityIndex !== -1) saleRowData[salesQuantityIndex] = sale.quantity.toString();
+      if (salesTotalAmountIndex !== -1) saleRowData[salesTotalAmountIndex] = sale.totalAmount.toString();
+      if (salesSoldByIndex !== -1) saleRowData[salesSoldByIndex] = sale.soldBy;
+      if (salesStatusIndex !== -1) saleRowData[salesStatusIndex] = sale.status;
+      if (salesAmountReceivedIndex !== -1) saleRowData[salesAmountReceivedIndex] = sale.amountReceived.toString();
+      if (salesChangeIndex !== -1) saleRowData[salesChangeIndex] = sale.change.toString();
+      
+      // Fill any undefined values with empty strings
+      for (let i = 0; i < saleRowData.length; i++) {
+        if (saleRowData[i] === undefined) {
+          saleRowData[i] = '';
+        }
+      }
+      
+      salesSheetUpdates.push({
+        range: `Sales!A${salesRows.length + 1}:${String.fromCharCode(65 + saleRowData.length - 1)}${salesRows.length + 1}`,
+        values: [saleRowData]
+      });
+    }
+    
+    // Apply all updates to Google Sheets
+    for (const update of salesSheetUpdates) {
+      // Determine which sheet to update based on the range
+      const sheetName = update.range.split('!')[0];
+      const range = update.range.split('!')[1];
+      
+      await googleSheetsService.updateSheetData(
+        sheetName,
+        range,
+        update.values,
+        'USER_ENTERED'
+      );
+    }
+    
+    sendSuccessResponse(res, { 
+      recordedSales: salesSheetUpdates.length
+    }, 'Sales recorded successfully');
   } catch (error) {
     const { message, statusCode } = handleError(error, req);
     sendErrorResponse(res, message, statusCode);
