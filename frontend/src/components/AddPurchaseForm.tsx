@@ -71,7 +71,7 @@ function SearchableProductSelect({
   return (
     <div className="searchable-select w-full">
       <div 
-        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex-1 truncate">
@@ -79,16 +79,16 @@ function SearchableProductSelect({
             <div>
               <div className="font-medium truncate">{value}</div>
               {selectedProduct && (
-                <div className="text-xs text-muted-foreground truncate">
+                <div className="text-xs text-gray-600 truncate">
                   Stock: {selectedProduct.currentStock} | Location: {selectedProduct.location}
                 </div>
               )}
             </div>
           ) : (
-            <span className="text-muted-foreground">{placeholder}</span>
+            <span className="text-gray-500">{placeholder}</span>
           )}
         </div>
-        <span className="ml-2 text-muted-foreground">▼</span>
+        <span className="ml-2 text-gray-500">▼</span>
       </div>
       
       {isOpen && (
@@ -106,9 +106,7 @@ function SearchableProductSelect({
           <div className="py-1 max-h-48 overflow-y-auto">
             {filteredProducts.length > 0 ? (
               filteredProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="px-3 py-2 hover:bg-accent hover:text-accent-foreground cursor-pointer flex justify-between items-center"
+                <div className="px-3 py-2 hover:bg-accent hover:text-accent-foreground cursor-pointer flex justify-between items-center"
                   onClick={() => {
                     onValueChange(product.name);
                     setIsOpen(false);
@@ -117,17 +115,17 @@ function SearchableProductSelect({
                 >
                   <div className="flex-1">
                     <div className="font-medium">{product.name}</div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-gray-600">
                       ID: {product.id} | Category: {product.category} | Stock: {product.currentStock}
                     </div>
                   </div>
-                  <div className="text-xs text-muted-foreground ml-2">
+                  <div className="text-xs text-gray-600 ml-2">
                     {product.location}
                   </div>
                 </div>
               ))
             ) : (
-              <div className="px-3 py-2 text-muted-foreground text-center">No products found</div>
+              <div className="px-3 py-2 text-gray-600 text-center">No products found</div>
             )}
           </div>
         </div>
