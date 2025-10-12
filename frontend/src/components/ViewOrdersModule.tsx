@@ -26,7 +26,8 @@ import {
   Clock,
   XCircle,
   RefreshCw,
-  Download
+  Download,
+  AlertCircle
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -96,14 +97,24 @@ export function ViewOrdersModule({ onViewOrder, onEditOrder, onDeleteOrder, onRe
   const [error, setError] = useState<string | null>(null);
   const [trackingEvents, setTrackingEvents] = useState<OrderTrackingEvent[]>([]);
 
+  // Use the correct sheet name without spaces
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      // Fetch purchase orders data from the Purchase Orders sheet
-      const response = await getSheetData('Purchase Orders');
+      setError(null);
+      
+      // Fetch purchase orders data from the PurchaseOrders sheet (without space)
+      const response = await getSheetData('PurchaseOrders');
       
       if (response && response.data && response.data.values) {
         const rows = response.data.values;
+        
+        // Check if we have data
+        if (rows.length === 0) {
+          setOrders([]);
+          setTrackingEvents([]);
+          return;
+        }
         
         // Skip header row and map the data to purchase order objects
         // Group items by order number since each item is a separate row
@@ -224,13 +235,20 @@ export function ViewOrdersModule({ onViewOrder, onEditOrder, onDeleteOrder, onRe
         });
         
         setTrackingEvents(mockEvents);
+      } else {
+        // No data returned
+        setOrders([]);
+        setTrackingEvents([]);
       }
       
       setError(null);
-    } catch (err: unknown) {
-      const error = err as Error;
-      setError('Failed to fetch purchase orders: ' + (error.message || 'Unknown error'));
-      console.error('Purchase orders fetch error:', error);
+    } catch (err: any) {
+      console.error('Purchase orders fetch error:', err);
+      // Provide more detailed error information
+      const errorMessage = err?.response?.data?.error || err?.message || 'Failed to fetch purchase orders';
+      setError(`Error loading purchase orders: ${errorMessage}`);
+      setOrders([]);
+      setTrackingEvents([]);
     } finally {
       setLoading(false);
     }
@@ -373,7 +391,10 @@ export function ViewOrdersModule({ onViewOrder, onEditOrder, onDeleteOrder, onRe
           </div>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-64">
-          <div className="text-gray-600">Loading purchase orders...</div>
+          <div className="text-gray-600 flex items-center">
+            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            Loading purchase orders...
+          </div>
         </CardContent>
       </Card>
     );
@@ -399,7 +420,46 @@ export function ViewOrdersModule({ onViewOrder, onEditOrder, onDeleteOrder, onRe
           </div>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-64">
-          <div className="text-red-500">{error}</div>
+          <div className="text-red-500 text-center">
+            <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
+            <p className="font-medium">Failed to load purchase orders</p>
+            <p className="text-sm mt-2">{error}</p>
+            <Button variant="outline" className="mt-4" onClick={handleRefresh}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // If we have no orders and no errors, show empty state
+  if (orders.length === 0 && !loading && !error) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="flex items-center">
+                <FileText className="mr-2 h-5 w-5" />
+                Purchase Orders
+              </CardTitle>
+              <CardDescription>
+                Manage your purchase orders
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleRefresh}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-64">
+          <div className="text-center text-gray-500">
+            <FileText className="h-12 w-12 mx-auto mb-4" />
+            <p className="font-medium">No purchase orders found</p>
+            <p className="text-sm mt-2">Create a new purchase order to get started</p>
+          </div>
         </CardContent>
       </Card>
     );
