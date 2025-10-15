@@ -249,11 +249,9 @@ The API returns appropriate HTTP status codes:
 
 ## 🚀 Railway Deployment
 
-### 1. Prerequisites
-- Railway account ([railway.app](https://railway.app))
-- GitHub repository with your code
+For detailed deployment instructions, see [BACKEND_DEPLOYMENT.md](BACKEND_DEPLOYMENT.md).
 
-### 2. Deployment Steps
+### Quick Deployment Steps
 
 1. **Connect Railway to GitHub**:
    - Log in to Railway
@@ -271,7 +269,7 @@ The API returns appropriate HTTP status codes:
    - The build process uses the provided `Dockerfile`
    - Your app will be available at `https://your-app-name.railway.app`
 
-### 3. Environment Variables for Railway
+### Environment Variables for Railway
 
 Set these variables in Railway dashboard:
 
@@ -307,6 +305,8 @@ Railway Project
 ```
 
 The frontend automatically detects when it's running in Railway and uses the internal service URL for better performance.
+
+For complete deployment instructions for both frontend and backend, see [FULL_DEPLOYMENT_GUIDE.md](FULL_DEPLOYMENT_GUIDE.md).
 
 ## 🖥️ Frontend Dashboard
 
@@ -365,7 +365,7 @@ docker run -p 3000:3000 google-sheets-dashboard
 - Build command: `npm run build`
 - Publish directory: `dist`
 
-See `frontend/DEPLOYMENT.md` for detailed instructions.
+See `frontend/FRONTEND_DEPLOYMENT.md` for detailed instructions.
 
 ## 🧪 Testing
 
