@@ -23,9 +23,9 @@ import {
   Star,
   CheckCircle
 } from 'lucide-react';
-import { getSpreadsheetMetadata, getSheetData } from '@/services/apiService';
+import { getSpreadsheetMetadata, getSheetData, recordSales } from '@/services/apiService';
 import { formatCurrency } from '@/lib/currency';
-import type { SpreadsheetMetadata } from '@/types';
+import type { SpreadsheetMetadata, SheetInfo } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import {
   BarChart,
@@ -78,8 +78,8 @@ export function Dashboard() {
           console.error('Metadata fetch error:', metadataError);
         }
 
-        // Fetch sales data
-        const salesResponse = await getSheetData('Sales', 'A1:J1000'); // Get first 1000 sales records
+        // Fetch sales data from Sales sheet
+        const salesResponse = await getSheetData('Sales', 'A1:N1000'); // Get first 1000 sales records
         const inventoryResponse = await getSheetData('Inventory');
         // Commenting out the Sales Forms request as it seems to be causing issues
         // const customersResponse = await getSheetData('Sales Forms');
@@ -88,29 +88,37 @@ export function Dashboard() {
           const sales = salesResponse.data.values;
           setSalesData(sales.slice(1, 6)); // Get first 5 sales records (skip header)
           
+          // If Sales sheet is empty, try to add some test data
+          if (sales.length <= 1) {
+            console.log('Sales sheet is empty, adding test data...');
+            // We'll add test data through the sales recording function
+          }
+          
           // Calculate total revenue and orders
           let revenue = 0;
           const headers = sales[0];
-          const kiasiIndex = headers.indexOf('KIASI');
+          const amountIndex = headers.indexOf('TOTAL  AMOUNT'); // Amount column in Sales sheet
           
-          for (let i = 1; i < Math.min(101, sales.length); i++) { // Calculate from first 100 records
+          for (let i = 1; i < sales.length; i++) { // Calculate from all available records
             const row = sales[i];
-            if (row[kiasiIndex]) {
-              const amount = parseFloat(row[kiasiIndex].replace('TSh', '').replace(/,/g, '')) || 0;
+            if (row[amountIndex]) {
+              const amountStr = row[amountIndex].toString();
+              const amount = parseFloat(amountStr.replace('TSh', '').replace(/,/g, '')) || 0;
               revenue += amount;
             }
           }
           
           setTotalRevenue(revenue);
-          setTotalOrders(Math.min(100, sales.length - 1)); // First 100 orders or total if less
+          setTotalOrders(sales.length - 1); // Total orders (excluding header)
           
           // Process revenue trend data
           const revenueByDate: Record<string, { date: string; revenue: number; orders: number }> = {};
           
-          for (let i = 1; i < Math.min(31, sales.length); i++) { // Last 30 days
+          for (let i = 1; i < sales.length; i++) { // Process all available records
             const row = sales[i];
-            const date = row[2]; // TAREHE (date)
-            const amount = parseFloat(row[9]?.replace('TSh', '').replace(/,/g, '')) || 0; // KIASI (amount)
+            const date = row[2]; // DATE
+            const amountStr = row[9]?.toString() || '0'; // TOTAL AMOUNT
+            const amount = parseFloat(amountStr.replace('TSh', '').replace(/,/g, '')) || 0;
             
             if (date) {
               if (!revenueByDate[date]) {
@@ -122,16 +130,20 @@ export function Dashboard() {
             }
           }
           
-          setRevenueTrendData(Object.values(revenueByDate).slice(0, 10)); // Last 10 days
+          // Sort by date and get last 10 days
+          const sortedDates = Object.keys(revenueByDate).sort().slice(-10);
+          const last10DaysData = sortedDates.map(date => revenueByDate[date]);
+          setRevenueTrendData(last10DaysData);
           
           // Process product performance data
           const productSales: Record<string, { name: string; revenue: number; quantity: number }> = {};
           
-          for (let i = 1; i < Math.min(51, sales.length); i++) {
+          for (let i = 1; i < sales.length; i++) {
             const row = sales[i];
-            const productName = row[5]; // BIDHAA (product name)
-            const revenue = parseFloat(row[9]?.replace('TSh', '').replace(/,/g, '')) || 0; // KIASI (amount)
-            const quantity = parseInt(row[8]) || 0; // IDADI (quantity)
+            const productName = row[5]; // PRODUCT
+            const amountStr = row[9]?.toString() || '0'; // TOTAL AMOUNT
+            const revenue = parseFloat(amountStr.replace('TSh', '').replace(/,/g, '')) || 0;
+            const quantity = parseInt(row[8]) || 0; // QUANTITY
             
             if (productName) {
               if (!productSales[productName]) {
@@ -150,20 +162,21 @@ export function Dashboard() {
           
           setProductPerformanceData(sortedProducts);
           
-          // Process customer analytics data
+          // Process customer analytics data (using SOLD BY as proxy for customers)
           const customerData: Record<string, { name: string; purchases: number; totalSpent: number }> = {};
           
-          for (let i = 1; i < Math.min(51, sales.length); i++) {
+          for (let i = 1; i < sales.length; i++) {
             const row = sales[i];
-            const customerName = row[4]; // JINA LA MTEJA (customer name)
-            const amount = parseFloat(row[9]?.replace('TSh', '').replace(/,/g, '')) || 0; // KIASI (amount)
+            const soldBy = row[10]; // SOLD BY
+            const amountStr = row[9]?.toString() || '0'; // TOTAL AMOUNT
+            const amount = parseFloat(amountStr.replace('TSh', '').replace(/,/g, '')) || 0;
             
-            if (customerName) {
-              if (!customerData[customerName]) {
-                customerData[customerName] = { name: customerName, purchases: 1, totalSpent: amount };
+            if (soldBy) {
+              if (!customerData[soldBy]) {
+                customerData[soldBy] = { name: soldBy, purchases: 1, totalSpent: amount };
               } else {
-                customerData[customerName].purchases += 1;
-                customerData[customerName].totalSpent += amount;
+                customerData[soldBy].purchases += 1;
+                customerData[soldBy].totalSpent += amount;
               }
             }
           }
@@ -240,6 +253,77 @@ export function Dashboard() {
     navigate(path);
   };
 
+  // Function to generate test sales data
+  const generateTestSalesData = async () => {
+    try {
+      setLoading(true);
+      const testSales = [
+        {
+          id: `TXN-${Date.now()}-1`,
+          receiptNo: `R${Math.floor(100000 + Math.random() * 900000)}`,
+          date: new Date().toISOString().split('T')[0],
+          time: new Date().toTimeString().split(' ')[0],
+          category: "Beverages",
+          product: "COKE 600ML",
+          price: 9700,
+          discount: 0,
+          quantity: 2,
+          totalAmount: 19400,
+          soldBy: "Cashier 1",
+          status: "completed",
+          amountReceived: 20000,
+          change: 600
+        },
+        {
+          id: `TXN-${Date.now()}-2`,
+          receiptNo: `R${Math.floor(100000 + Math.random() * 900000)}`,
+          date: new Date().toISOString().split('T')[0],
+          time: new Date().toTimeString().split(' ')[0],
+          category: "Snacks",
+          product: "LAYS CHIPS",
+          price: 5000,
+          discount: 0,
+          quantity: 1,
+          totalAmount: 5000,
+          soldBy: "Cashier 1",
+          status: "completed",
+          amountReceived: 5000,
+          change: 0
+        },
+        {
+          id: `TXN-${Date.now()}-3`,
+          receiptNo: `R${Math.floor(100000 + Math.random() * 900000)}`,
+          date: new Date().toISOString().split('T')[0],
+          time: new Date().toTimeString().split(' ')[0],
+          category: "Beverages",
+          product: "SPRITE 600ML",
+          price: 9700,
+          discount: 0,
+          quantity: 3,
+          totalAmount: 29100,
+          soldBy: "Cashier 2",
+          status: "completed",
+          amountReceived: 30000,
+          change: 900
+        }
+      ];
+
+      // Record the sales
+      const response = await recordSales(testSales);
+      console.log('Test sales recorded:', response);
+      
+      // Refresh the data
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (error) {
+      console.error('Error generating test sales data:', error);
+      setError('Failed to generate test data: ' + (error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Calculate stats based on real data
   const stats = [
     { title: "Total Revenue", value: formatCurrency(totalRevenue), description: "+12.1% from last month", icon: DollarSign, trend: "up" },
@@ -261,6 +345,10 @@ export function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button onClick={generateTestSalesData} variant="outline" className="flex items-center">
+            <BarChart3 className="mr-2 h-4 w-4" />
+            Generate Test Data
+          </Button>
           <Button onClick={() => navigate('/end-of-day')} className="flex items-center">
             <Calendar className="mr-2 h-4 w-4" />
             End of Day Report
@@ -389,7 +477,7 @@ export function Dashboard() {
                     fill="#8884d8"
                     dataKey="revenue"
                     nameKey="name"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name}: ${(percent as number * 100).toFixed(0)}%`}
                   >
                     {productPerformanceData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -634,7 +722,8 @@ export function Dashboard() {
                         >
                           <span className="text-sm font-medium">{sheet.title || 'Untitled Sheet'}</span>
                           <span className="text-xs text-gray-600">
-                            {sheet.rowCount} rows × {sheet.columnCount} columns
+                            {sheet.gridProperties.rowCount} rows × {sheet.gridProperties.columnCount} columns
+
                           </span>
 
                         </motion.div>
@@ -646,7 +735,7 @@ export function Dashboard() {
                   )}
                 </div>
                 <p className="text-sm text-gray-600 mt-1">
-                  Last updated: {metadata.lastUpdated || 'Never'}
+                  Last updated: {metadata.properties?.modifiedTime || 'Never'}
                 </p>
 
               </motion.div>

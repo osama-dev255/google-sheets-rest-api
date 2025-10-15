@@ -1,0 +1,80 @@
+/* Print-specific styles */
+@media print {
+  /* Hide everything by default */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Show only the receipt content when printing */
+  .receipt-print-area,
+  .receipt-print-area * {
+    visibility: visible;
+  }
+  
+  /* Position the receipt content at the top left of the page */
+  .receipt-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+  }
+  
+  /* Hide UI elements that shouldn't be printed */
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+  
+  /* Reset some styles for better printing */
+  body {
+    margin: 0;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  
+  /* Ensure the receipt looks good on paper */
+  .receipt-header {
+    text-align: center;
+    border-bottom: 1px solid #000;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .receipt-header h2 {
+    margin: 0 0 5px 0;
+    font-size: 16px;
+  }
+  
+  .receipt-header p {
+    margin: 2px 0;
+    font-size: 10px;
+  }
+  
+  .receipt-items {
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    padding: 10px 0;
+    margin: 10px 0;
+  }
+  
+  .receipt-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 10px;
+  }
+  
+  .receipt-totals {
+    font-size: 10px;
+  }
+  
+  .receipt-totals .total {
+    font-weight: bold;
+    border-top: 1px solid #000;
+    padding-top: 5px;
+    margin-top: 5px;
+  }
+}

@@ -1,0 +1,64 @@
+/* Mobile-specific print styles */
+@media screen and (max-width: 768px) {
+  /* Ensure the print window is optimized for mobile */
+  body {
+    padding: 10px;
+    margin: 0;
+    font-size: 14px;
+  }
+  
+  .receipt {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+  }
+  
+  .print-button {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    font-size: 16px;
+    margin: 20px 0;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .print-button:hover {
+    background-color: #0056b3;
+  }
+}
+
+@media print {
+  /* Hide all UI elements except the receipt content */
+  body * {
+    visibility: hidden;
+  }
+  
+  .receipt, .receipt * {
+    visibility: visible;
+  }
+  
+  .receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none;
+  }
+  
+  /* Hide the print button when actually printing */
+  .print-button {
+    display: none !important;
+  }
+  
+  /* Optimize for thermal printers */
+  body {
+    margin: 0;
+    padding: 5px;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+}

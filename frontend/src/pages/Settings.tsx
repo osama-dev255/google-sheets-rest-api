@@ -1,16 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Save, 
   Building, 
   Bell, 
   Shield, 
   Printer,
-  Database
+  Database,
+  FileText
 } from 'lucide-react';
 import {
   Select,
@@ -20,8 +22,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
+import { useReceiptSettings } from '@/contexts/ReceiptSettingsContext';
 
 export function Settings() {
+  const { settings, updateSettings } = useReceiptSettings();
+  
   const [businessName, setBusinessName] = useState('Business Project Tanzania');
   const [businessAddress, setBusinessAddress] = useState('123 Business Street, Dar es Salaam, Tanzania');
   const [businessPhone, setBusinessPhone] = useState('+255 123 456 789');
@@ -32,7 +37,13 @@ export function Settings() {
   const [notifications, setNotifications] = useState(true);
   const [lowStockAlert, setLowStockAlert] = useState(true);
   const [printerEnabled, setPrinterEnabled] = useState(true);
+  
   const { toast } = useToast();
+
+  // Load receipt settings from context
+  useEffect(() => {
+    setReceiptFooter(settings.footer);
+  }, [settings.footer]);
 
   const handleSave = () => {
     // In a real app, this would save to a database or API
@@ -47,6 +58,11 @@ export function Settings() {
       notifications,
       lowStockAlert,
       printerEnabled
+    });
+    
+    // Save receipt settings to context
+    updateSettings({
+      footer: receiptFooter
     });
     
     // Show success message
@@ -161,6 +177,125 @@ export function Settings() {
                   value={receiptFooter}
                   onChange={(e) => setReceiptFooter(e.target.value)}
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Receipt Template Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FileText className="mr-2 h-5 w-5" />
+                Receipt Template
+              </CardTitle>
+              <CardDescription>
+                Customize the appearance of your sales receipts
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="receiptHeader">Receipt Header</Label>
+                <Input
+                  id="receiptHeader"
+                  value={settings.header}
+                  onChange={(e) => updateSettings({ header: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="receiptAddressLine1">Address Line 1</Label>
+                <Input
+                  id="receiptAddressLine1"
+                  value={settings.addressLine1}
+                  onChange={(e) => updateSettings({ addressLine1: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="receiptAddressLine2">Address Line 2</Label>
+                <Input
+                  id="receiptAddressLine2"
+                  value={settings.addressLine2}
+                  onChange={(e) => updateSettings({ addressLine2: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="receiptPaymentMethod">Default Payment Method</Label>
+                <Input
+                  id="receiptPaymentMethod"
+                  value={settings.paymentMethod}
+                  onChange={(e) => updateSettings({ paymentMethod: e.target.value })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Show Tax Information</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Display tax details on receipts
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.showTax}
+                  onCheckedChange={(checked) => updateSettings({ showTax: checked })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Show Discount Information</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Display discount details on receipts
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.showDiscounts}
+                  onCheckedChange={(checked) => updateSettings({ showDiscounts: checked })}
+                />
+              </div>
+              
+              {/* Receipt Preview */}
+              <div className="mt-4 p-4 border rounded-lg bg-gray-50">
+                <h3 className="font-medium mb-2">Receipt Preview</h3>
+                <div className="text-xs space-y-1">
+                  <div className="text-center border-b pb-2">
+                    <div className="font-bold">{settings.header}</div>
+                    <div>{settings.addressLine1}</div>
+                    <div>{settings.addressLine2}</div>
+                  </div>
+                  <div className="flex justify-between mt-2">
+                    <span>Receipt #: TXN-001</span>
+                    <span>2025-01-01 10:30</span>
+                  </div>
+                  <div className="border-t border-b py-2 my-2">
+                    <div className="flex justify-between">
+                      <div>
+                        <div>Product Name</div>
+                        <div className="ml-2">x2</div>
+                        {settings.showDiscounts && (
+                          <div className="ml-2 text-red-500">(-1000)</div>
+                        )}
+                      </div>
+                      <div>20000</div>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between">
+                      <span>Subtotal:</span>
+                      <span>20000</span>
+                    </div>
+                    {settings.showTax && (
+                      <div className="flex justify-between">
+                        <span>Tax (18%):</span>
+                        <span>3600</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-bold border-t pt-1">
+                      <span>Total:</span>
+                      <span>23600</span>
+                    </div>
+                  </div>
+                  <div className="text-center mt-3 text-xs">
+                    <p>Payment Method: {settings.paymentMethod}</p>
+                    <p className="mt-1">{settings.footer}</p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
