@@ -207,7 +207,10 @@ export class GoogleSheetsService {
     valueInputOption: 'RAW' | 'USER_ENTERED' = 'USER_ENTERED'
   ): Promise<void> {
     try {
-      const fullRange = `${sheetName}!${range}`;
+      // Check if range already includes sheet name to avoid duplication
+      const fullRange = range.includes('!')
+        ? range // Range already includes sheet name
+        : `${sheetName}!${range}`; // Add sheet name to range
       
       logger.debug('Updating sheet data', {
         spreadsheetId: this.spreadsheetId,
@@ -283,7 +286,10 @@ export class GoogleSheetsService {
    */
   async clearSheetData(sheetName: string, range?: string): Promise<void> {
     try {
-      const fullRange = range ? `${sheetName}!${range}` : sheetName;
+      // Check if range already includes sheet name to avoid duplication
+      const fullRange = range 
+        ? (range.includes('!') ? range : `${sheetName}!${range}`) // Add sheet name if not already included
+        : sheetName; // If no range provided, use sheet name only
       
       logger.debug('Clearing sheet data', {
         spreadsheetId: this.spreadsheetId,
