@@ -17,10 +17,18 @@
 - **Problem**: Dev dependencies were being removed before build
 - **Fix**: Install all dependencies first, build, then remove dev dependencies
 
+### 4. **Backend Dockerfile Creation (October 15, 2025)**
+- **Problem**: No dedicated Dockerfile for backend deployment
+- **Fix**: Created new Dockerfile with multi-stage build process for backend
+
+### 5. **Railway Configuration Update (October 15, 2025)**
+- **Problem**: Railway configuration pointed to frontend Dockerfile
+- **Fix**: Updated railway.json to point to backend Dockerfile
+
 ## 📋 **Key Changes Made**
 
 ### **.dockerignore** (Fixed)
-```dockerignore
+``dockerignore
 # BEFORE (Broken)
 src/
 *.ts
@@ -41,7 +49,7 @@ dist/
 ```
 
 ### **Dockerfile** (Optimized)
-```dockerfile
+``dockerfile
 # Install all dependencies (including dev dependencies for build)
 RUN npm install
 

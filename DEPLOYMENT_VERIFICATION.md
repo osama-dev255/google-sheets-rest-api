@@ -30,6 +30,11 @@ The cost field validation now checks for:
 - NaN (Not a Number) values
 - Negative values (must be zero or positive)
 
+### 5. Backend Deployment Preparation (October 15, 2025)
+- Created dedicated Dockerfile for backend deployment with multi-stage build
+- Updated railway.json configuration to point to correct Dockerfile
+- Optimized container build process for smaller production images
+
 ## How to Verify Deployment
 
 ### 1. Check Netlify Build
