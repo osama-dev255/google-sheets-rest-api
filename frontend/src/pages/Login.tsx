@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { Eye, EyeOff, Store } from 'lucide-react';
+import { Eye, EyeOff, Store, RefreshCw } from 'lucide-react';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -14,7 +14,8 @@ export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { login, refreshUser } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,10 +26,24 @@ export function Login() {
     try {
       await login(email, password);
       navigate('/');
-    } catch (error) {
-      setError('Invalid email or password');
+    } catch (error: any) {
+      setError(error.message || 'Invalid email or password. Please check your credentials and try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRefreshData = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshUser();
+      setError('Authentication data refreshed successfully.');
+      // Clear the success message after 3 seconds
+      setTimeout(() => setError(''), 3000);
+    } catch (error: any) {
+      setError(error.message || 'Failed to refresh authentication data. Please try again.');
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -90,7 +105,7 @@ export function Login() {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       className="bg-slate-700/50 border-slate-600 text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 pr-10"
-                      placeholder="Enter your password"
+                      placeholder="Enter your password 👁️"
                     />
                     <button
                       type="button"
@@ -129,33 +144,39 @@ export function Login() {
                     className="h-5 w-5 border-2 border-white border-t-transparent rounded-full"
                   />
                 ) : (
-                  'Sign In to Dashboard'
+                  'Sign In to Dashboard 🌍 '
                 )}
               </Button>
             </form>
             
-            <div className="mt-8 pt-6 border-t border-slate-700/50">
-              <div className="text-center">
-                <h3 className="text-sm font-medium text-slate-700 mb-3">Demo Credentials</h3>
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="bg-slate-700/30 p-3 rounded-lg">
-                    <p className="text-xs text-slate-600">Administrator</p>
-                    <p className="text-sm text-slate-700">admin@businessproject.co.tz</p>
-                  </div>
-                  <div className="bg-slate-700/30 p-3 rounded-lg">
-                    <p className="text-xs text-slate-600">Operations Manager</p>
-                    <p className="text-sm text-slate-700">manager@businessproject.co.tz</p>
-                  </div>
-                  <div className="bg-slate-700/30 p-3 rounded-lg">
-                    <p className="text-xs text-slate-600">Cashier</p>
-                    <p className="text-sm text-slate-700">cashier@businessproject.co.tz</p>
-                  </div>
-                </div>
-              </div>
+            <div className="mt-4 flex justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshData}
+                disabled={isRefreshing}
+                className="text-slate-600 border-slate-600 hover:bg-slate-700/50"
+              >
+                {isRefreshing ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Refreshing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh Auth Data
+                  </>
+                )}
+              </Button>
             </div>
             
+            {/* Removed demo credentials display */}
+            
             <div className="mt-6 text-center text-xs text-slate-600">
-              <p>© 2025 Kilango Group Food Ind LTD. Haki zote zimehifadhiwa.</p>
+              <p>© 2025 Kilango Group Food Ind LTD. Haki zote zimehifadhiwa.🫱🏽‍🫲🏻</p>
+              <p className="mt-1">Authentication data is synchronized with System data Users</p>
             </div>
           </CardContent>
         </Card>

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Login Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .error {
+            color: #d32f2f;
+            background-color: #ffebee;
+            border-left: 4px solid #d32f2f;
+        }
+        .success {
+            color: #388e3c;
+            background-color: #e8f5e9;
+            border-left: 4px solid #388e3c;
+        }
+        .warning {
+            color: #f57c00;
+            background-color: #fff3e0;
+            border-left: 4px solid #f57c00;
+        }
+        .info {
+            color: #1976d2;
+            background-color: #e3f2fd;
+            border-left: 4px solid #1976d2;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .user-found {
+            background-color: #e8f5e9;
+        }
+        .user-not-found {
+            background-color: #ffebee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>User Login Test</h1>
+        
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" value="accountant@businessproject.co.tz">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" value="accountant147">
+        </div>
+        
+        <button id="testBtn">Test User Credentials</button>
+        
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        document.getElementById('testBtn').addEventListener('click', testUser);
+
+        async function testUser() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('testBtn');
+            const resultDiv = document.getElementById('result');
+            
+            // Validate input
+            if (!email || !password) {
+                showResult('Please enter both email and password', 'error');
+                return;
+            }
+            
+            // Disable button and show loading
+            btn.disabled = true;
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading">Testing user credentials...</div>';
+            
+            try {
+                // Replace with your actual API base URL
+                const API_BASE_URL = 'https://google-sheets-rest-api-production.up.railway.app';
+                
+                // Fetch Sheet1 data
+                const response = await fetch(`${API_BASE_URL}/api/v1/sheets/Sheet1`);
+                const data = await response.json();
+                
+                if (!data || !data.data || !data.data.values) {
+                    showResult('❌ No data returned from API', 'error');
+                    return;
+                }
+                
+                const sheetData = data.data.values;
+                
+                if (sheetData.length < 2) {
+                    showResult('❌ Sheet1 does not contain user data (need at least header + 1 user row)', 'error');
+                    return;
+                }
+                
+                // Check header row
+                const headerRow = sheetData[0];
+                const emailColumnIndex = headerRow.indexOf('Email');
+                const passwordColumnIndex = headerRow.indexOf('Password');
+                const nameColumnIndex = headerRow.indexOf('Name');
+                const roleColumnIndex = headerRow.indexOf('Role');
+                const idColumnIndex = headerRow.indexOf('ID');
+                
+                if (emailColumnIndex === -1 || passwordColumnIndex === -1 || nameColumnIndex === -1 || roleColumnIndex === -1 || idColumnIndex === -1) {
+                    showResult('❌ Required columns not found in header row. Expected: ID, Name, Email, Password, Role', 'error');
+                    return;
+                }
+                
+                // Search for the user
+                let userFound = false;
+                let userRowIndex = -1;
+                let userData = null;
+                
+                for (let i = 1; i < sheetData.length; i++) {
+                    const row = sheetData[i];
+                    const userEmail = row[emailColumnIndex];
+                    
+                    if (userEmail === email) {
+                        userFound = true;
+                        userRowIndex = i;
+                        userData = {
+                            id: row[idColumnIndex],
+                            name: row[nameColumnIndex],
+                            email: userEmail,
+                            password: row[passwordColumnIndex],
+                            role: row[roleColumnIndex],
+                            row: i + 1
+                        };
+                        break;
+                    }
+                }
+                
+                if (userFound) {
+                    // Display user information
+                    let html = `
+                        <div class="info">
+                            <h2>🔍 User Found in Sheet1</h2>
+                            <table>
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Value</th>
+                                </tr>
+                                <tr>
+                                    <td>ID</td>
+                                    <td>${userData.id}</td>
+                                </tr>
+                                <tr>
+                                    <td>Name</td>
+                                    <td>${userData.name}</td>
+                                </tr>
+                                <tr>
+                                    <td>Email</td>
+                                    <td>${userData.email}</td>
+                                </tr>
+                                <tr>
+                                    <td>Role</td>
+                                    <td>${userData.role}</td>
+                                </tr>
+                                <tr>
+                                    <td>Row Number</td>
+                                    <td>${userData.row}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    `;
+                    
+                    // Check if role is valid
+                    const validRoles = ['admin', 'manager', 'cashier', 'accountant', 'sales', 'finance'];
+                    if (!validRoles.includes(userData.role)) {
+                        html += `
+                            <div class="warning" style="margin-top: 15px;">
+                                <h2>⚠️ INVALID ROLE!</h2>
+                                <p>Valid roles are: ${validRoles.join(', ')}</p>
+                            </div>
+                        `;
+                    }
+                    
+                    // Check password
+                    if (userData.password === password) {
+                        html += `
+                            <div class="success" style="margin-top: 15px;">
+                                <h2>✅ PASSWORD MATCH!</h2>
+                                <p>The user should be able to log in successfully with these credentials.</p>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div class="error" style="margin-top: 15px;">
+                                <h2>❌ PASSWORD MISMATCH!</h2>
+                                <p>The password in Sheet1 does not match the one you entered.</p>
+                                <table>
+                                    <tr>
+                                        <th>Your Password</th>
+                                        <th>Sheet1 Password</th>
+                                    </tr>
+                                    <tr>
+                                        <td>"${password}"</td>
+                                        <td>"${userData.password}"</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Length: ${password.length}</td>
+                                        <td>Length: ${userData.password ? userData.password.length : 0}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        `;
+                    }
+                    
+                    resultDiv.innerHTML = html;
+                    resultDiv.className = 'result';
+                } else {
+                    // User not found
+                    let html = `
+                        <div class="error">
+                            <h2>❌ User Not Found</h2>
+                            <p>User with email "${email}" was not found in Sheet1.</p>
+                        </div>
+                        <div class="info" style="margin-top: 15px;">
+                            <h3>Users Found in Sheet1:</h3>
+                            <table>
+                                <tr>
+                                    <th>Row</th>
+                                    <th>Email</th>
+                                    <th>Name</th>
+                                </tr>
+                    `;
+                    
+                    // Show first 10 users
+                    for (let i = 1; i < Math.min(sheetData.length, 11); i++) {
+                        const row = sheetData[i];
+                        const userEmail = row[emailColumnIndex];
+                        const userName = row[nameColumnIndex];
+                        if (userEmail) {
+                            html += `
+                                <tr>
+                                    <td>${i + 1}</td>
+                                    <td>${userEmail}</td>
+                                    <td>${userName || ''}</td>
+                                </tr>
+                            `;
+                        }
+                    }
+                    
+                    if (sheetData.length > 11) {
+                        html += `
+                            <tr>
+                                <td colspan="3">... and ${sheetData.length - 11} more users</td>
+                            </tr>
+                        `;
+                    }
+                    
+                    html += '</table></div>';
+                    resultDiv.innerHTML = html;
+                    resultDiv.className = 'result';
+                }
+                
+            } catch (error) {
+                showResult(`❌ Error testing user: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+    </script>
+</body>
+</html>

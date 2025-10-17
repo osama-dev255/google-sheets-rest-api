@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sheet1 Inspector</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+        }
+        .error {
+            color: #d32f2f;
+            background-color: #ffebee;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #d32f2f;
+        }
+        .success {
+            color: #388e3c;
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #388e3c;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        .analysis {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sheet1 Data Inspector</h1>
+        
+        <div class="controls">
+            <button id="inspectBtn">Inspect Sheet1 Data</button>
+        </div>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        document.getElementById('inspectBtn').addEventListener('click', inspectSheet1);
+
+        async function inspectSheet1() {
+            const btn = document.getElementById('inspectBtn');
+            const resultDiv = document.getElementById('result');
+            
+            // Disable button and show loading
+            btn.disabled = true;
+            resultDiv.innerHTML = '<div class="loading">Fetching Sheet1 data...</div>';
+            
+            try {
+                // Replace with your actual API base URL
+                const API_BASE_URL = 'https://google-sheets-rest-api-production.up.railway.app';
+                
+                // Fetch Sheet1 data
+                const response = await fetch(`${API_BASE_URL}/api/v1/sheets/Sheet1`);
+                const data = await response.json();
+                
+                if (!data || !data.data || !data.data.values) {
+                    resultDiv.innerHTML = '<div class="error">❌ No data returned from API</div>';
+                    return;
+                }
+                
+                const sheetData = data.data.values;
+                
+                if (sheetData.length === 0) {
+                    resultDiv.innerHTML = '<div class="error">❌ Sheet1 is empty</div>';
+                    return;
+                }
+                
+                // Build result HTML
+                let html = `
+                    <div class="success">
+                        <h2>✅ Found ${sheetData.length} rows in Sheet1</h2>
+                    </div>
+                `;
+                
+                // Create table
+                html += '<table><thead><tr>';
+                
+                // Header row
+                const headerRow = sheetData[0];
+                headerRow.forEach((header, index) => {
+                    html += `<th>${index}: ${header}</th>`;
+                });
+                
+                html += '</tr></thead><tbody>';
+                
+                // Data rows (limit to first 10 for display)
+                const rowsToDisplay = Math.min(sheetData.length, 11); // Header + 10 data rows
+                for (let i = 0; i < rowsToDisplay; i++) {
+                    const row = sheetData[i];
+                    const rowLabel = i === 0 ? 'Header' : `Row ${i}`;
+                    html += '<tr>';
+                    row.forEach(cell => {
+                        html += `<td>${cell || ''}</td>`;
+                    });
+                    html += '</tr>';
+                }
+                
+                html += '</tbody></table>';
+                
+                if (sheetData.length > rowsToDisplay) {
+                    html += `<p>... and ${sheetData.length - rowsToDisplay} more rows</p>`;
+                }
+                
+                // Analysis
+                html += '<div class="analysis"><h3>Analysis</h3>';
+                
+                // Check for required headers
+                const requiredHeaders = ['ID', 'Name', 'Email', 'Password', 'Role'];
+                const missingHeaders = requiredHeaders.filter(header => !headerRow.includes(header));
+                
+                if (missingHeaders.length > 0) {
+                    html += `<p>❌ Missing required headers: ${missingHeaders.join(', ')}</p>`;
+                } else {
+                    html += '<p>✅ All required headers present</p>';
+                }
+                
+                // Check user data (skip header)
+                if (sheetData.length > 1) {
+                    html += `<p>User Accounts: ${sheetData.length - 1}</p>`;
+                    
+                    let validUsers = 0;
+                    let invalidUsers = 0;
+                    let issues = [];
+                    
+                    for (let i = 1; i < Math.min(sheetData.length, 11); i++) {
+                        const [id, name, email, password, role] = sheetData[i];
+                        
+                        // Check if all fields are present
+                        if (!id || !name || !email || !password || !role) {
+                            issues.push(`⚠️ Incomplete user data at row ${i + 1}`);
+                            invalidUsers++;
+                        } else {
+                            // Check email format
+                            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                            if (!emailRegex.test(email)) {
+                                issues.push(`⚠️ Invalid email format at row ${i + 1}: ${email}`);
+                                invalidUsers++;
+                            } else {
+                                // Check role
+                                const validRoles = ['admin', 'manager', 'cashier'];
+                                if (!validRoles.includes(role)) {
+                                    issues.push(`⚠️ Invalid role at row ${i + 1}: ${role}`);
+                                    invalidUsers++;
+                                } else {
+                                    validUsers++;
+                                }
+                            }
+                        }
+                    }
+                    
+                    html += `<p>Valid Users (in first 10 rows): ${validUsers}</p>`;
+                    html += `<p>Invalid Users (in first 10 rows): ${invalidUsers}</p>`;
+                    
+                    if (issues.length > 0) {
+                        html += '<ul>';
+                        issues.forEach(issue => {
+                            html += `<li>${issue}</li>`;
+                        });
+                        html += '</ul>';
+                    }
+                }
+                
+                html += '</div>';
+                
+                resultDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h2>❌ Error inspecting Sheet1</h2>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +13,8 @@ import {
   Shield, 
   Printer,
   Database,
-  FileText
+  FileText,
+  Wrench
 } from 'lucide-react';
 import {
   Select,
@@ -26,6 +28,7 @@ import { useReceiptSettings } from '@/contexts/ReceiptSettingsContext';
 
 export function Settings() {
   const { settings, updateSettings } = useReceiptSettings();
+  const navigate = useNavigate();
   
   const [businessName, setBusinessName] = useState('Business Project Tanzania');
   const [businessAddress, setBusinessAddress] = useState('123 Business Street, Dar es Salaam, Tanzania');
@@ -70,6 +73,10 @@ export function Settings() {
       title: "Settings saved",
       description: "Your settings have been saved successfully.",
     });
+  };
+
+  const goToAuthDiagnostics = () => {
+    navigate('/auth-diagnostics');
   };
 
   return (
@@ -178,6 +185,27 @@ export function Settings() {
                   onChange={(e) => setReceiptFooter(e.target.value)}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Authentication Diagnostics Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Wrench className="mr-2 h-5 w-5" />
+                Authentication Diagnostics
+              </CardTitle>
+              <CardDescription>
+                Troubleshoot login issues and diagnose authentication problems
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                If some users registered in Sheet1 cannot log in, use the diagnostics tool to identify and resolve issues.
+              </p>
+              <Button onClick={goToAuthDiagnostics} className="w-full">
+                Run Authentication Diagnostics
+              </Button>
             </CardContent>
           </Card>
 

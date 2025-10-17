@@ -29,9 +29,14 @@ import { Cashflow } from '@/pages/Cashflow';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ReceiptSettingsProvider } from './contexts/ReceiptSettingsContext';
 import { Toaster } from '@/components/ui/toaster';
+import { useAuthSync } from './hooks/useAuthSync';
+import { AuthDiagnostics } from './pages/AuthDiagnostics';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
+
+  // Initialize auth sync hook
+  useAuthSync();
 
   useEffect(() => {
     // Simulate loading time for splash screen
@@ -176,6 +181,16 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <Settings />
+                  </Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/auth-diagnostics" 
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <AuthDiagnostics />
                   </Layout>
                 </ProtectedRoute>
               } 

@@ -1,0 +1,7 @@
+ID,Name,Email,Password,Role
+1,John Smith,admin@businessproject.co.tz,securePassword123,admin
+2,Sarah Johnson,manager@businessproject.co.tz,managerPass456,manager
+3,Mike Wilson,cashier@businessproject.co.tz,cashierPass789,cashier
+4,Alice Accounting,accountant@businessproject.co.tz,accountant147,accountant
+5,David Sales,sales@businessproject.co.tz,sales258,sales
+6,Fiona Finance,finance@businessproject.co.tz,finance369,finance
