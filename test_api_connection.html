@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .error {
+            color: #d32f2f;
+            background-color: #ffebee;
+            border-left: 4px solid #d32f2f;
+        }
+        .success {
+            color: #388e3c;
+            background-color: #e8f5e9;
+            border-left: 4px solid #388e3c;
+        }
+        .warning {
+            color: #f57c00;
+            background-color: #fff3e0;
+            border-left: 4px solid #f57c00;
+        }
+        .info {
+            color: #1976d2;
+            background-color: #e3f2fd;
+            border-left: 4px solid #1976d2;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API Connection Test</h1>
+        
+        <button id="testBtn">Test API Connections</button>
+        
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        document.getElementById('testBtn').addEventListener('click', testApiConnections);
+
+        async function testApiConnections() {
+            const btn = document.getElementById('testBtn');
+            const resultDiv = document.getElementById('result');
+            
+            // Disable button and show loading
+            btn.disabled = true;
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading">Testing API connections...</div>';
+            
+            try {
+                // Backend API URL
+                const BACKEND_API_URL = 'https://google-sheets-rest-api-production.up.railway.app';
+                
+                let html = '<h2>API Connection Test Results</h2>';
+                
+                // Test backend health
+                html += '<h3>Backend Health Check</h3>';
+                try {
+                    const healthResponse = await fetch(`${BACKEND_API_URL}/health`);
+                    const healthData = await healthResponse.json();
+                    
+                    if (healthResponse.ok) {
+                        html += `<div class="success">✅ Backend is healthy<br>Uptime: ${healthData.uptime}</div>`;
+                    } else {
+                        html += `<div class="error">❌ Backend health check failed<br>Status: ${healthResponse.status}</div>`;
+                    }
+                } catch (error) {
+                    html += `<div class="error">❌ Backend health check failed<br>Error: ${error.message}</div>`;
+                }
+                
+                // Test Sheet1 access
+                html += '<h3>Sheet1 Data Access</h3>';
+                try {
+                    const sheetResponse = await fetch(`${BACKEND_API_URL}/api/v1/sheets/Sheet1`);
+                    const sheetData = await sheetResponse.json();
+                    
+                    if (sheetResponse.ok && sheetData.data && sheetData.data.values) {
+                        html += `<div class="success">✅ Sheet1 data accessed successfully<br>Rows: ${sheetData.data.values.length}</div>`;
+                        
+                        // Look for finance user
+                        const rows = sheetData.data.values;
+                        const headerRow = rows[0];
+                        const emailColumnIndex = headerRow.indexOf('Email');
+                        
+                        if (emailColumnIndex !== -1) {
+                            html += '<h4>Searching for finance@businessproject.co.tz...</h4>';
+                            
+                            let userFound = false;
+                            for (let i = 1; i < Math.min(rows.length, 10); i++) {
+                                const row = rows[i];
+                                const email = row[emailColumnIndex];
+                                
+                                if (email === 'finance@businessproject.co.tz') {
+                                    userFound = true;
+                                    html += `
+                                        <div class="success">
+                                            ✅ User found at row ${i + 1}<br>
+                                            Name: ${row[headerRow.indexOf('Name')]}<br>
+                                            Role: ${row[headerRow.indexOf('Role')]}
+                                        </div>
+                                    `;
+                                    break;
+                                }
+                            }
+                            
+                            if (!userFound) {
+                                html += '<div class="warning">⚠️ User not found in first 10 rows</div>';
+                                
+                                // Show first few users
+                                html += '<h4>First few users in Sheet1:</h4>';
+                                html += '<table><tr>';
+                                headerRow.forEach(header => {
+                                    html += `<th>${header}</th>`;
+                                });
+                                html += '</tr>';
+                                
+                                for (let i = 1; i < Math.min(rows.length, 5); i++) {
+                                    const row = rows[i];
+                                    html += '<tr>';
+                                    row.forEach(cell => {
+                                        html += `<td>${cell || ''}</td>`;
+                                    });
+                                    html += '</tr>';
+                                }
+                                html += '</table>';
+                            }
+                        } else {
+                            html += '<div class="error">❌ Email column not found in header</div>';
+                        }
+                    } else {
+                        html += `<div class="error">❌ Sheet1 access failed<br>Status: ${sheetResponse.status}</div>`;
+                    }
+                } catch (error) {
+                    html += `<div class="error">❌ Sheet1 access failed<br>Error: ${error.message}</div>`;
+                }
+                
+                resultDiv.innerHTML = html;
+                resultDiv.className = 'result';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error testing API connections: ${error.message}</div>`;
+                resultDiv.className = 'result';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

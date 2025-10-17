@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Diagnostic Tool</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background-color: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background: linear-gradient(to right, #007bff, #0056b3);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #007bff;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #e9ecef;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .user-found {
+            background-color: #d4edda;
+        }
+        .user-not-found {
+            background-color: #f8d7da;
+        }
+        .credentials-match {
+            background-color: #d1ecf1;
+        }
+        .credentials-mismatch {
+            background-color: #f8d7da;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Authentication Diagnostic Tool</h1>
+        
+        <div class="test-section">
+            <h2>Test Configuration</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label for="email"><strong>Email:</strong></label>
+                    <input type="email" id="email" value="finance@businessproject.co.tz" style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ced4da; border-radius: 4px;">
+                </div>
+                <div>
+                    <label for="password"><strong>Password:</strong></label>
+                    <input type="password" id="password" value="finance369" style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ced4da; border-radius: 4px;">
+                </div>
+            </div>
+            <button id="runTestBtn">Run Comprehensive Diagnostic</button>
+        </div>
+        
+        <div id="resultsContainer" class="hidden">
+            <div class="test-section">
+                <h2>1. Backend Health Check</h2>
+                <div id="healthResult" class="result"></div>
+            </div>
+            
+            <div class="test-section">
+                <h2>2. Spreadsheet Metadata</h2>
+                <div id="metadataResult" class="result"></div>
+            </div>
+            
+            <div class="test-section">
+                <h2>3. Sheet1 Data Access</h2>
+                <div id="sheet1Result" class="result"></div>
+            </div>
+            
+            <div class="test-section">
+                <h2>4. User Search Results</h2>
+                <div id="userSearchResult" class="result"></div>
+            </div>
+            
+            <div class="test-section">
+                <h2>5. Credential Validation</h2>
+                <div id="credentialValidationResult" class="result"></div>
+            </div>
+            
+            <div class="test-section">
+                <h2>6. All Sheets Overview</h2>
+                <div id="allSheetsResult" class="result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('runTestBtn').addEventListener('click', runComprehensiveDiagnostic);
+        
+        const BACKEND_URL = 'https://google-sheets-rest-api-production.up.railway.app';
+        
+        async function runComprehensiveDiagnostic() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('runTestBtn');
+            const resultsContainer = document.getElementById('resultsContainer');
+            
+            // Reset results
+            document.querySelectorAll('.result').forEach(el => {
+                el.style.display = 'none';
+                el.className = 'result';
+                el.innerHTML = '';
+            });
+            resultsContainer.classList.remove('hidden');
+            
+            // Disable button
+            btn.disabled = true;
+            btn.innerHTML = 'Running Diagnostic...';
+            
+            try {
+                // Test 1: Backend Health
+                await testBackendHealth();
+                
+                // Test 2: Spreadsheet Metadata
+                await testMetadata();
+                
+                // Test 3: Sheet1 Data
+                const sheetData = await testSheet1Data();
+                
+                // Test 4: User Search
+                const userData = await searchUser(sheetData, email);
+                
+                // Test 5: Credential Validation
+                await validateCredentials(userData, password);
+                
+                // Test 6: All Sheets
+                await testAllSheets();
+                
+            } catch (error) {
+                console.error('Diagnostic error:', error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Run Comprehensive Diagnostic';
+            }
+        }
+        
+        async function testBackendHealth() {
+            const resultDiv = document.getElementById('healthResult');
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Checking backend health...</div>';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Backend is Healthy</h3>
+                            <p><strong>Uptime:</strong> ${data.uptime}</p>
+                            <p><strong>Timestamp:</strong> ${data.timestamp}</p>
+                        </div>
+                    `;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Backend Health Check Failed</h3>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Error:</strong> ${data.message || 'Unknown error'}</p>
+                        </div>
+                    `;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Backend Health Check Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+                resultDiv.className = 'result error';
+            }
+        }
+        
+        async function testMetadata() {
+            const resultDiv = document.getElementById('metadataResult');
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Fetching spreadsheet metadata...</div>';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/v1/sheets/metadata`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    let sheetsHtml = '<ul>';
+                    data.data.sheets.forEach((sheet, index) => {
+                        sheetsHtml += `<li>${index + 1}. ${sheet.title}</li>`;
+                    });
+                    sheetsHtml += '</ul>';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Metadata Fetched Successfully</h3>
+                            <p><strong>Spreadsheet Title:</strong> ${data.data.title}</p>
+                            <p><strong>Total Sheets:</strong> ${data.data.sheets.length}</p>
+                            <p><strong>Sheets:</strong></p>
+                            ${sheetsHtml}
+                        </div>
+                    `;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Metadata Fetch Failed</h3>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Error:</strong> ${data.message || 'Unknown error'}</p>
+                        </div>
+                    `;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Metadata Fetch Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+                resultDiv.className = 'result error';
+            }
+        }
+        
+        async function testSheet1Data() {
+            const resultDiv = document.getElementById('sheet1Result');
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Accessing Sheet1 data...</div>';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/v1/sheets/Sheet1`);
+                const data = await response.json();
+                
+                if (response.ok && data.data && data.data.values) {
+                    const sheetData = data.data.values;
+                    const headerRow = sheetData[0];
+                    
+                    // Create header table
+                    let headerHtml = '<table><thead><tr>';
+                    headerRow.forEach((header, index) => {
+                        headerHtml += `<th>${index}: ${header}</th>`;
+                    });
+                    headerHtml += '</tr></thead></table>';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Sheet1 Data Accessed Successfully</h3>
+                            <p><strong>Total Rows:</strong> ${sheetData.length}</p>
+                            <p><strong>Header Columns:</strong> ${headerRow.length}</p>
+                            <p><strong>Header Row:</strong></p>
+                            ${headerHtml}
+                        </div>
+                    `;
+                    resultDiv.className = 'result success';
+                    
+                    return sheetData;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Sheet1 Data Access Failed</h3>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Error:</strong> ${data.message || 'Unknown error'}</p>
+                        </div>
+                    `;
+                    resultDiv.className = 'result error';
+                    return null;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Sheet1 Data Access Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+                resultDiv.className = 'result error';
+                return null;
+            }
+        }
+        
+        async function searchUser(sheetData, email) {
+            const resultDiv = document.getElementById('userSearchResult');
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Searching for user...</div>';
+            resultDiv.style.display = 'block';
+            
+            if (!sheetData || sheetData.length === 0) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Cannot Search User</h3>
+                        <p>No Sheet1 data available</p>
+                    </div>
+                `;
+                resultDiv.className = 'result error';
+                return null;
+            }
+            
+            try {
+                const headerRow = sheetData[0];
+                const emailColumnIndex = headerRow.indexOf('Email');
+                const passwordColumnIndex = headerRow.indexOf('Password');
+                const nameColumnIndex = headerRow.indexOf('Name');
+                const roleColumnIndex = headerRow.indexOf('Role');
+                const idColumnIndex = headerRow.indexOf('ID');
+                
+                if (emailColumnIndex === -1) {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Cannot Search User</h3>
+                            <p>Email column not found in header row</p>
+                        </div>
+                    `;
+                    resultDiv.className = 'result error';
+                    return null;
+                }
+                
+                let userFound = false;
+                let userData = null;
+                
+                for (let i = 1; i < sheetData.length; i++) {
+                    const row = sheetData[i];
+                    const userEmail = row[emailColumnIndex];
+                    
+                    if (userEmail === email) {
+                        userFound = true;
+                        userData = {
+                            row: i + 1,
+                            id: row[idColumnIndex],
+                            name: row[nameColumnIndex],
+                            email: userEmail,
+                            password: row[passwordColumnIndex],
+                            role: row[roleColumnIndex]
+                        };
+                        break;
+                    }
+                }
+                
+                if (userFound) {
+                    // Validate role
+                    const validRoles = ['admin', 'manager', 'cashier', 'accountant', 'sales', 'finance'];
+                    const isRoleValid = validRoles.includes(userData.role);
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ User Found in Sheet1</h3>
+                            <table>
+                                <tr><td><strong>Row:</strong></td><td>${userData.row}</td></tr>
+                                <tr><td><strong>ID:</strong></td><td>${userData.id || 'N/A'}</td></tr>
+                                <tr><td><strong>Name:</strong></td><td>${userData.name || 'N/A'}</td></tr>
+                                <tr><td><strong>Email:</strong></td><td>${userData.email}</td></tr>
+                                <tr><td><strong>Role:</strong></td><td>${userData.role || 'N/A'} ${isRoleValid ? '✅' : '❌ (Invalid)'}</td></tr>
+                            </table>
+                            ${!isRoleValid ? `<p class="error"><strong>⚠️ Invalid Role:</strong> Must be one of: ${validRoles.join(', ')}</p>` : ''}
+                        </div>
+                    `;
+                    resultDiv.className = 'result success';
+                } else {
+                    // Show first few users for reference
+                    let usersHtml = '<table><thead><tr><th>Row</th><th>Name</th><th>Email</th></tr></thead><tbody>';
+                    for (let i = 1; i < Math.min(sheetData.length, 6); i++) {
+                        const row = sheetData[i];
+                        const userName = row[nameColumnIndex];
+                        const userEmail = row[emailColumnIndex];
+                        usersHtml += `<tr><td>${i}</td><td>${userName || 'N/A'}</td><td>${userEmail || 'N/A'}</td></tr>`;
+                    }
+                    usersHtml += '</tbody></table>';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ User Not Found</h3>
+                            <p>User with email <strong>${email}</strong> not found in Sheet1</p>
+                            <p><strong>First 5 users in Sheet1:</strong></p>
+                            ${usersHtml}
+                        </div>
+                    `;
+                    resultDiv.className = 'result error';
+                }
+                
+                return userData;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ User Search Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+                resultDiv.className = 'result error';
+                return null;
+            }
+        }
+        
+        async function validateCredentials(userData, password) {
+            const resultDiv = document.getElementById('credentialValidationResult');
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Validating credentials...</div>';
+            resultDiv.style.display = 'block';
+            
+            if (!userData) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Cannot Validate Credentials</h3>
+                        <p>User data not available</p>
+                    </div>
+                `;
+                resultDiv.className = 'result error';
+                return;
+            }
+            
+            try {
+                if (userData.password === password) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Credentials Match!</h3>
+                            <p><strong>Authentication should work successfully.</strong></p>
+                            <p>The user should be able to log in with these credentials.</p>
+                        </div>
+                    `;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Password Mismatch!</h3>
+                            <p><strong>Expected:</strong> "${password}"</p>
+                            <p><strong>Found:</strong> "${userData.password}"</p>
+                            <p><strong>Length Comparison:</strong> Expected: ${password.length}, Found: ${userData.password ? userData.password.length : 0}</p>
+                            <p><strong>Possible Issues:</strong></p>
+                            <ul>
+                                <li>Extra spaces in password</li>
+                                <li>Case sensitivity issues</li>
+                                <li>Hidden characters</li>
+                            </ul>
+                        </div>
+                    `;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Credential Validation Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+                resultDiv.className = 'result error';
+            }
+        }
+        
+        async function testAllSheets() {
+            const resultDiv = document.getElementById('allSheetsResult');
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Checking all sheets...</div>';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/v1/sheets/all`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const sheets = Object.keys(data.data);
+                    let sheetsHtml = '<ul>';
+                    sheets.forEach(sheetName => {
+                        const sheet = data.data[sheetName];
+                        const rowCount = sheet.values ? sheet.values.length : 0;
+                        sheetsHtml += `<li>${sheetName}: ${rowCount} rows ${rowCount > 0 ? '✅' : '⚠️'}</li>`;
+                    });
+                    sheetsHtml += '</ul>';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ All Sheets Data Fetched</h3>
+                            <p><strong>Total Sheets:</strong> ${sheets.length}</p>
+                            <p><strong>Sheets Overview:</strong></p>
+                            ${sheetsHtml}
+                        </div>
+                    `;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ All Sheets Data Fetch Failed</h3>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Error:</strong> ${data.message || 'Unknown error'}</p>
+                        </div>
+                    `;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ All Sheets Data Fetch Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+                resultDiv.className = 'result error';
+            }
+        }
+    </script>
+</body>
+</html>
